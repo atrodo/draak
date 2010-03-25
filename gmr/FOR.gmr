@@ -1,0 +1,321 @@
+Root         => <Goal>
+Preprocess   => s/^[c*].*$//i
+Preprocess   => s/^(.{0,72})$/$1 /i
+Preprocess   => s/^(.{5}) . ([^\n]*?) (\d{8})? \n .{5} \S ([^\n]*?) (\d{8})? \n/$1 $2$4$3\n/
+
+Preprocess   => s/(\d{8})$//
+#LineNo       => s/(\d{8})$//
+
+
+<Backspace>  -> BACKSPACE ( {<Unit>} <id> {<Err>} {<Iostat>} )
+<Goal>       -> <Program> <EOL> <Statements>* <End> <EOL> .
+<Statements> -> <Label> <Statement> <EOL>
+<Statement>  -> <Assign>
+<Statement>  -> <Assignment>
+<Statement>  -> <Backspace>
+<Statement>  -> <Block>
+<Statement>  -> <Call>
+<Statement>  -> <Character>
+<Statement>  -> <Close>
+<Statement>  -> <Common>
+<Statement>  -> <Complex>
+<Statement>  -> <Continue>
+<Statement>  -> <Data>
+<Statement>  -> <Dimension>
+<Statement>  -> <Do>
+<Statement>  -> <Double>
+<Statement>  -> <End>
+<Statement>  -> <EndFile>
+<Statement>  -> <Entry>
+<Statement>  -> <Equivalence>
+<Statement>  -> <External>
+<Statement>  -> <Format>
+<Statement>  -> <Function>
+<Statement>  -> <GoTo>
+<Statement>  -> <If>
+<Statement>  -> <Implicit>
+<Statement>  -> <Inquire>
+<Statement>  -> <Integer>
+<Statement>  -> <Intrinstic>
+<Statement>  -> <Logical>
+<Statement>  -> <Open>
+<Statement>  -> <Parameter>
+<Statement>  -> <Pause>
+<Statement>  -> <Print>
+<Statement>  -> <Program>
+<Statement>  -> <Read>
+<Statement>  -> <Real>
+<Statement>  -> <Return>
+<Statement>  -> <Rewind>
+<Statement>  -> <Save>
+<Statement>  -> <Stop>
+<Statement>  -> <Subroutine>
+<Statement>  -> <Write>
+
+<Program>    -> PROGRAM <id>
+<End>        -> END
+
+<Unit>       -> UNIT =
+<Err>        -> , ERR = <id>
+<Iostat>     -> , IOSTAT = <id>
+<Access>     -> , ACCESS = <id>
+<Blank>      -> , BLANK = <id>
+<Direct      -> , DIRECT = <id>
+<Exist>      -> , EXIST = <id>
+<Form>       -> , FORM = <id>
+<Formatted>  -> , FORMATTED = <id>
+<Name>       -> , NAME = <id>
+<Named>      -> , NAMED = <id>
+<Nextrec>    -> , NEXTREC = <id>
+<Number>     -> , NUMBER = <id>
+<Opened>     -> , OPENED = <id>
+<Recl>       -> , RECL = <id>
+<Sequential> -> , SEQUENTIAL = <id>
+<Unformatted>-> , UNFORMATTED = <id>
+<Fmt>        -> , {<fmteq>} <fs>
+<fmteq>      -> FMT =
+
+<Assignment> -> <id> = <expr>
+
+<Assign>     -> ASSIGN <id> TO <id>
+
+<Backspace>  -> BACKSPACE <id>
+<Backspace>  -> BACKSPACE ( {<Unit>} <id> {<Err>} {<Iostat>} )
+
+<Block>      -> BLOCK DATA {<id>}
+
+<Call>       -> CALL <id> {<actuals>}
+<actuals>    -> ( <Param> <Params*> )
+<Param>      -> <id>
+<Params>     -> , <Param>
+
+<Character>  -> CHARACTER {<cchars>} <id> {<clength>} {<cdim>} {<cvname>}
+<cchars>     -> * <id>
+<clength>    -> * <id>
+<cdim>       -> ( <id> )
+<cvname>     -> , <id> {<clength>} {<cdim>}
+
+<Close>      -> CLOSE ( {<Unit>} <id> {<Err>} {<Iostat>} {<Status>} )
+
+<Common>     -> COMMON {<Commonblock>} <nlist> <MoreCommon>*
+<Commonblock>-> /<id>/
+<nlist>      -> <id> <nlists>*
+<nlists>     -> , <id>
+<MoreCommon> -> <Commonblock> <nlist>
+
+<Complex>    -> COMPLEX <vname> <vnames>*
+<vnames>     -> , <vname>
+<vname>      -> <id> {<dim>}
+<dim>        -> ( <id> )
+
+<Continue>   -> CONTINUE
+#   "FORMAT" [editlist] .
+
+<Data>       -> DATA <datalist> <datalists>*
+<datalists>  -> , <datalist>
+<datalist>   -> <nlist> / <clist> /
+<clist>      -> <clistItem> <clistItems>*
+<clistItems> -> , <clistItem>
+<clistItem>  -> {<repeatable>} <constant>
+<repeatable> -> <nzUnsignInt> *
+
+<Dimension>  -> DIMENSION <dimDefine> <dimDefines>*
+<dimDefines> -> , <dimDefine>
+<dimDefine>  -> <id> ( <dimDecl> <dimDecls>* )
+<dimDecls>   -> , <dimDecl>
+<dimDecl>    -> {<dimLower>} <num>
+
+<Do>         -> {<doLabel>} <id> = <num> , <num> {<doInc>}
+<doInc>      -> , <num>
+<doLabel>    -> <id> {<comma>}
+<comma>      -> ,
+
+<Double>     -> DOUBLE PRECISION <vname> <vnames*>
+
+<EndFile>    -> ENDFILE <id>
+<EndFile>    -> ENDFILE ( {<Unit>} <id> {<Err>} {<Iostat>} )
+
+<Entry>      -> ENTRY <id> {<actuals>}
+
+<Equivalence>-> EQUIVALENCE ( <nlist> ) <equivs>*
+<equivs>     -> , ( <nlist> )
+
+<External>   -> EXTERNAL <nlist> <nlists>*
+
+<Format>     -> FORMAT <fs>
+<fs>         -> ( <flist> <flists>* )
+<flists>     -> , <flist>
+<flist>      -> {<repeatable>} <ed>
+<flist>      -> {<repeatable>} <fs>
+<flist>      -> <ned>
+
+<ed>         -> I<nzUnsignInt>
+<ed>         -> I<nzUnsignInt>.<unsignInt>
+<ed>         -> F<nzUnsignInt>.<unsignInt>
+<ed>         -> E<nzUnsignInt>.<unsignInt>
+<ed>         -> E<nzUnsignInt>.<unsignInt>E<unsignInt>
+<ed>         -> D<nzUnsignInt>.<unsignInt>
+<ed>         -> G<nzUnsignInt>.<unsignInt>
+<ed>         -> G<nzUnsignInt>.<unsignInt>E<unsignInt>
+<ed>         -> L<nzUnsignInt>
+<ed>         -> A
+<ed>         -> A<nzUnsignInt>
+#<ned>        ~> m/(?'len'\d+)H(.{\g{len}})/
+<ned>        -> <ChrConst>
+<ned>        -> T<nzUnsignInt>
+<ned>        -> TL<nzUnsignInt>
+<ned>        -> TR<nzUnsignInt>
+<ned>        -> <nzUnsignInt>X
+<ned>        -> /
+<ned>        -> :
+<ned>        -> S
+<ned>        -> SP
+<ned>        -> SS
+<ned>        -> {<signInt>}P
+<ned>        -> BN
+<ned>        -> BZ
+
+<Function>   -> {<type>} FUNCTION <id> ( <Param> <Params*> )
+
+<GoTo>       -> GOTO <id>
+#<GoTo>       -> GOTO <id>
+#   "GOTO" ( label | "(" labels")" [ "," ] n | variable [ [ "," ] "(" labels ")" ] ) .
+
+<If>         -> IF ( <expr> ) <ifblock>
+<ifblock>    -> <label> , <label> , <label>
+<If>         -> <Statement>
+<If>         -> THEN <Statements>* <ElseIfs>* ELSE <Statements>* END IF
+
+<Implicit>   -> IMPLICIT <impType> <impTypes>* 
+<impTypes>   -> , <impType>
+<impType>    -> <type> ( <letter> <letters>* )
+
+<letters>    -> , <letter>
+<letter>     ~> m/[A-Z]/
+<letter>     ~> m/[A-Z]\s*-\s*[A-Z]/
+
+<Inquire>    -> INQUIRE ( {<Unit>} <id> <InqOptions> )
+<Inquire>    -> INQUIRE ( FILE <id> <InqOptions> )
+<InqOptions> -> {<Access>} {<Blank>} {<Direct>} {<Err>} {<Exist>} {<Form>} {<Formatted>} {<Iostat>} {<Name>} {<Named>} {<Nextrec>} {<Number>} {<Opened>} {<Recl>} {<Sequential>} {<Unformatted>}
+
+<Integer>    -> INTEGER <vname> <vnames>*
+
+<Intrinstic> -> INTRINSIC <nlist> <nlists>*
+
+<Logical>    -> LOGICAL <vname> <vnames>*
+
+<Open>       -> OPEN ( {<UNIT>} <id> {<Access>} {<Blank>} {<Err>} {<File>} {<Form>} {<Iostat>} {<Recl>} {<Status>}
+
+<Parameter>  -> PARAMETER ( <nameConst> <nameConsts>* )
+<nameConsts> -> , <nameConst>
+<nameConst>  -> <id> = <constexpr>
+
+<Pause>      -> PAUSE {<prompt>}
+<prompt>     ~> m/(\d{1,5})/
+
+<Print>      -> <fs> {<nlist>}
+
+<Read>       -> READ <fs> , {<nlist>}
+<Read>       -> READ {<UNIT>} <id> {<Fmt>} {<End>} {<Err>} {<Iostat>} {<Rec>} {<nlist>}
+
+<Real>       -> <vname> <vnames>*
+
+<Return>     -> RETURN {<ordinal>}
+
+<Rewind>     -> REWIND <id>
+<Rewind>     -> REWIND ( {<Unit>} <id> {<Err>} {<Iostat>} )
+
+<Save>       -> SAVE <slist> <slists>*
+<slists>     -> , <slist>
+<slist>      -> <Commonblock>
+<slist>      -> <id>
+
+<Stop>       -> STOP <message>
+<message>    ~> m/(\d{1,5})/
+<message>    -> <ChrConst>
+
+<Subroutine> -> SUBROUTINE <id> <actuals>
+
+<Write>      -> WRITE ( {<Unit>} <id> {<Fmt>} {<Err>} {<Iostat>} {<Rec>}  {<nlist>}
+
+
+<expr>       -> <iexpr> 
+<expr>       -> <aexpr> 
+<expr>       -> <cexpr> 
+#<expr>       -> <lexpr> 
+
+<cexpr>      -> <cprimary>
+<cexpr>      -> <cprimary> // <cexpr>
+
+<cprimary>   -> <ChrConst>
+<cprimary>   -> <primary>
+<cprimary>   -> <substring>
+<cprimary>   -> ( <cexpr> )
+
+<iexpr>      -> <iterm>
+<iexpr>      -> + <iterm>
+<iexpr>      -> - <iterm>
+<iexpr>      -> <iexpr> + <iterm>
+<iexpr>      -> <iepxr> - <iterm>
+
+<iprimary>   -> <Integer>
+<iprimary>   -> <iprimary>
+<iprimary>   -> ( <iexpr> )
+
+<ifactor>    -> <iprimary>
+<ifactor>    -> <iprimary> ** <ifactor>
+
+<iterm>      -> <ifactor>
+<iterm>      -> <ifactor> / <iterm>
+<iterm>      -> <ifactor> * <iterm>
+
+<aexpr>      -> <aterm>
+<aexpr>      -> + <aterm>
+<aexpr>      -> - <aterm>
+<aexpr>      -> <aexpr> + <aterm>
+<aexpr>      -> <aepxr> - <aterm>
+
+<aprimary>   -> <Number>
+<aprimary>   -> <primary>
+<aprimary>   -> ( <aexpr> )
+
+<afactor>    -> <aprimary>
+<afactor>    -> <aprimary> ** <afactor>
+
+<aterm>      -> <afactor>
+<aterm>      -> <afactor> / <aterm>
+<aterm>      -> <afactor> * <aterm>
+
+<primary>    -> <id>
+<primary>    -> <arrayelem>
+<primary>    -> <id> <actuals>
+
+<arrayelem>  -> <id> ( <subscript> <subscripts>* )
+<subscripts> -> , <subscript>
+<subscript>  -> <expr>
+
+<substring>  -> <primary> ( <iexpr> : <iexpr> )
+
+<Label>      ~> m/^(.....)/
+
+<EOL>        ~> m/\n/
+
+<ChrConst>   ~> m/(?:') ([^']*(?:(?:'')[^']*)*) (?:')/
+
+<unsignInt>  ~> m/(       \d+                          )/
+<Integer>    ~> m/( [+-]? \d+                          )/
+<Real>       ~> m/( [+-]?     \. \d+ (?: E [+-]? \d+)? )/
+<Real>       ~> m/( [+-]? \d+ \. \d* (?: E [+-]? \d+)? )/
+<Real>       ~> m/( [+-]? \d+        (?: E [+-]? \d+)  )/
+<Double>     ~> m/( [+-]? \d+ \. \d* (?: D [+-]? \d+)  )/
+<Double>     ~> m/( [+-]? \d+        (?: D [+-]? \d+)  )/
+
+<nzUnsignInt>-> <unsignInt>
+<Number>     -> <Integer>
+<Number>     -> <Real>
+<Number>     -> <Double>
+
+<ComplexNum> -> ( <Number> , <Number> )
+
+<Logical>    -> .TRUE.
+<Logical>    -> .False.
