@@ -142,11 +142,11 @@ begin
     draak1.onAssemble := e.Draak1Assemble;
     draak1.onLink := e.Draak1Assemble;
     draak1.onCompile := e.Draak1Compile;
-    {$ifdef TREETRACE}
+    { $ifdef TREETRACE}
     draak1.onNodeCreate := e.Draak1NodeCreate;
     draak1.onNodeChild := e.Draak1NodeChild;
     draak1.onNodePop := e.Draak1NodePop;
-    {$endif}
+    { $endif}
 //    draak1.parse(Paramstr(1));
     draak1.compile(outFile, Paramstr(1));
   except on Ex: Exception do

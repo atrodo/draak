@@ -9,13 +9,14 @@ unit parser;
 
 interface
 
-uses filedrv, hashs, classes, error, gmrdrv;
+uses filedrv, hashs, classes, error, gmrdrv, RegExp;
 
 type
   PParseNode = ^RParseNode;
   RParseNode = record
     point: PGmrNode;
     line: cardinal;
+    data: array of string;
     children: array of PParseNode;
   end;
 
@@ -41,6 +42,7 @@ type
     function len: cardinal;
     function lineFind(charNum: cardinal): cardinal;
     function copy(s, len: cardinal): string;
+    function match(regex: TRegExp; var offset: cardinal): boolean;
   end;
 
   TParser = class
@@ -67,10 +69,12 @@ begin
   if FMax^ < i+start then
     FMax^ := i+start;
 end;
+
 function TString.getMax: Cardinal;
 begin
   result := FMax^;
 end;
+
 constructor TString.create(inF: TFile; startChar: cardinal; inB: string; inMax: PCardinal);
 var a: string; i, o, buffLen: cardinal;
 begin
@@ -110,11 +114,13 @@ begin
     parent := false;
   end;
 end;
+
 function TString.getNew(startChar: cardinal): TString;
 begin
   result := TString.create(f, start+startChar-1, buff, FMax);
   result.lineNums := lineNums;
 end;
+
 function TString.lineFind(charNum: cardinal): cardinal;
 var s, i: cardinal;
   old: array of boolean;
@@ -135,14 +141,26 @@ begin
   Finalize(old);
 //  setLength(old, 0);
 end;
+
 function TString.len: cardinal;
 begin
   result := cardinal(length(buff))-start;
 end;
+
 function TString.copy(s, len: cardinal): string;
 begin
   result := system.Copy(buff, start+s, len);
 end;
+
+function TString.match(regex: TRegExp; var offset: cardinal): boolean;
+begin
+  regex.bind(buff);
+  regex.offset := start + offset;
+  result := regex.match;
+  if result = true then
+    offset := offset + length(regex.matched);
+end;
+
 destructor TString.destroy;
 begin
   if parent = true then
@@ -157,64 +175,6 @@ var s: TString;
 begin
   lines := 0;
   s := TString.create(inF, 0, '', nil);
-//  err.stream(s.copy(0, 1000));
-  {
-  dumbHash := inG.getHashNode('<str>');
-  if dumbHash = nil then
-    alphanum := ['A'..'Z', 'a'..'z', '0'..'9', '_']
-  else
-  begin
-    alphanum := [];
-    for i := 0 to length(dumbHash.RHS.terminal)-1 do
-    begin
-      alphanum := alphanum + [dumbHash.RHS.terminal[i]];
-    end;
-  end;
-  dumbHash := inG.getHashNode('<num>');
-  if dumbHash = nil then
-    numbers := ['0'..'9']
-  else
-  begin
-    numbers := [];
-    for i := 0 to length(dumbHash.RHS.terminal)-1 do
-    begin
-      numbers := numbers + [dumbHash.RHS.terminal[i]];
-    end;
-  end;
-  dumbHash := inG.getHashNode('<hex>');
-  if dumbHash = nil then
-    hexs := ['0'..'9', 'A'..'F', 'a'..'f']
-  else
-  begin
-    hexs := [];
-    for i := 0 to length(dumbHash.RHS.terminal)-1 do
-    begin
-      hexs := hexs + [dumbHash.RHS.terminal[i]];
-    end;
-  end;
-  dumbHash := inG.getHashNode('<oct>');
-  if dumbHash = nil then
-    octs := ['0'..'7']
-  else
-  begin
-    octs := [];
-    for i := 0 to length(dumbHash.RHS.terminal)-1 do
-    begin
-      octs := octs + [dumbHash.RHS.terminal[i]];
-    end;
-  end;
-  dumbHash := inG.getHashNode('<bin>');
-  if dumbHash = nil then
-    bins := ['0'..'1']
-  else
-  begin
-    bins := [];
-    for i := 0 to length(dumbHash.RHS.terminal)-1 do
-    begin
-      bins := bins + [dumbHash.RHS.terminal[i]];
-    end;
-  end;
-  }
   i := parseDecent(s, inG, inG.getGoal, Node);
   lines := inF.lineCount;
   if i < s.len-1 then i := 0;
@@ -225,11 +185,13 @@ end;
 
 function TParser.parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode): word;
 var dumbAtom, tempAtom: PGmrAtom;
-  tempNode: PGmrNode;
-  s: string; i, o, count: word;
+  tempNode: AGmrNode;
+  s: string; i, o, count: cardinal;
   atomI: word;
+  nodeI: word;
   Node: PParseNode;
   partial: boolean;
+  matched: boolean;
   tempS: TString;
 begin
   err.newNode(inNode.name + '"' + inS.copy(0, 10) + '"');
@@ -241,9 +203,11 @@ begin
   //dumbAtom := innode.RHS;
   o := 1;
   result := 0;
-  if (dumbAtom.typed = nonTerminal) AND (string(dumbAtom.data) = inNode.name) then
+  dumbAtom := innode.RHS[0];
+  if (dumbAtom.typed = nonTerminal) AND (dumbAtom.data = inNode.name) then
     raise EDraakNoCompile.Create('Infinate recursion on '+inNode.name);
 
+  writeln('aaa');
   try
   //while dumbAtom <> nil do
   for atomI := 0 to length(innode.RHS)-1 do
@@ -252,9 +216,18 @@ begin
     if inS[o] = ' ' then inc(o);
     dumbAtom := innode.RHS[atomI];
 
+    matched := false;
+
     case dumbAtom.typed of
      terminal:
       begin
+        matched := inS.match(dumbAtom.re, o);
+        if matched then
+        begin
+          err.addNode('-> '+dumbAtom.data);
+          partial := true;
+        end;
+        {
         s := dumbAtom.data;         
         for i := 1 to length(s) do
         begin
@@ -266,160 +239,48 @@ begin
         end;
         err.addNode(dumbAtom.data);
         partial := true;
+        }
       end;
-     {
-     id:
+     Matching:
       begin
-        i := o;
-        if inS[i] in numbers then exit;
-        while inS[i] in alphanum do inc(i);
-        s := inS.copy(o, i-o);
-        tempNode := inG.getHashNode('<id>');
-        if tempNode <> nil then
+        matched := inS.match(dumbAtom.re, o);
+        if matched then
         begin
-          tempAtom := tempNode^.RHS;
-          while tempAtom <> nil do
-          begin
-            if Ansipos(' '+s+' ', tempAtom.terminal) <> 0 then
-            begin
-              err.addNode('<id> ' + s + '!!!');
-              result := 0; exit;
-            end;
-            tempAtom := tempAtom.next;
-          end;
+          err.addNode('~> '+dumbAtom.data);
+          partial := true;
+          Node := new(PParseNode);
+          Node.point := inNode;
+          setLength(Node.data, dumbAtom.re.captureLength);
+          for i := 0 to length(Node.data)-1 do
+            Node.data[i] := dumbAtom.re.capture[i].captured;
+          setLength(Node.children, 0);
         end;
-        err.addNode('<id> ' + s);
-        Node := new(PParseNode);
-        tempNode := new(PHashNode);
-        tempNode.name := s;
-        tempNode.next := nil;
-        tempNode.RHS := nil;
-        tempNode.Macros := nil;
-        tempNode.special := true;
-        Node.point := tempNode^;
-        setLength(Node.children, 0);
-        finalize(tempNode^);
-        o := i;
       end;
-     }
-     {
-     str:
-      begin
-        if inS[o] <> '''' then exit;
-        i := o+1;
-        while (inS[i] <> '''') AND (i < inS.len) do
-        if (inS[i+1] = '''') AND (inS[i+2] = '''') then
-        begin inc(i, 3); end
-        else inc(i);
-        if o = inS.len then exit;
-        s := inS.copy(o+1, i-o-1);
-        count := AnsiPos('''''', s);
-        while count <> 0 do
-        begin
-          delete(s, count, 1); count := AnsiPos('''''', s);
-        end;
-        Node := new(PParseNode);
-        tempNode := new(PHashNode);
-        tempNode.next := nil;
-        tempNode.RHS := nil;
-        tempNode.Macros := nil;
-        tempNode.name := s;
-        tempNode.special := true;
-        Node.point := tempNode^;
-        finalize(tempNode^);
-        o := i+1;
-      end;
-     num:
-      begin
-        if (not(inS[o] in numbers) AND (inS[o] <> '-')) OR (o = inS.len) then exit;
-        i := o;
-        if inS[i] = '-' then inc(i);
-        while inS[i] in numbers do inc(i);
-        s := inS.copy(o, i-o);
-        Node := new(PParseNode);
-        tempNode := new(PHashNode);
-        tempNode.next := nil;
-        tempNode.RHS := nil;
-        tempNode.Macros := nil;
-        tempNode.name := s;
-        tempNode.special := true;
-        Node.point := tempNode^;
-        finalize(tempNode^);
-        o := i;
-      end;
-     hex:
-      begin
-        if (not(inS[o] in hexs) OR (o = inS.len)) then exit;
-        i := o;
-        while inS[i] in hexs do inc(i);
-        s := inS.copy(o, i-o);
-        Node := new(PParseNode);
-        tempNode := new(PHashNode);
-        tempNode.next := nil;
-        tempNode.RHS := nil;
-        tempNode.Macros := nil;
-        tempNode.name := s;
-        tempNode.special := true;
-        Node.point := tempNode^;
-        finalize(tempNode^);
-        o := i;
-      end;
-     oct:
-      begin
-        if (not(inS[o] in octs) OR (o = inS.len)) then exit;
-        i := o;
-        while inS[i] in octs do inc(i);
-        s := inS.copy(o, i-o);
-        Node := new(PParseNode);
-        tempNode := new(PHashNode);
-        tempNode.next := nil;
-        tempNode.RHS := nil;
-        tempNode.Macros := nil;
-        tempNode.name := s;
-        tempNode.special := true;
-        Node.point := tempNode^;
-        finalize(tempNode^);
-        o := i;
-      end;
-     bin:
-      begin
-        if (not(inS[o] in bins) OR (o = inS.len)) then exit;
-        i := o;
-        while inS[i] in bins do inc(i);
-        s := inS.copy(o, i-o);
-        Node := new(PParseNode);
-        tempNode := new(PHashNode);
-        tempNode.next := nil;
-        tempNode.RHS := nil;
-        tempNode.Macros := nil;
-        tempNode.name := s;
-        tempNode.special := true;
-        Node.point := tempNode^;
-        finalize(tempNode^);
-        o := i;
-      end;
-     }
      nonterminal:
       begin
         count := 0;
         tempNode := inG.getHashNode(dumbAtom.data);
-        if tempNode = nil then
+        if length(tempNode) = 0 then
         begin
           err.err('No such Non-terminal: ' + dumbAtom.data);
           exit;
         end;
-        while tempNode <> nil do
+        //while tempNode <> nil do
+        //for nodeI := 0 to length(tempNode)-1 do
+        nodeI := 0;
+        while nodeI < length(tempNode) do
         begin
           tempS := inS.getNew(o);
-          i := parseDecent(tempS, inG, tempNode, Node);
+          i := parseDecent(tempS, inG, tempNode[nodeI], Node);
           tempS.Free;
           if i = 0 then {Try next option}
           begin
-            inc(count);
-            tempNode := inG.getHashNode(dumbAtom.data);
-            if (tempNode = nil) AND (dumbAtom.optional = false) then exit;
-            if tempNode = nil then node := nil;
-            continue;
+            //inc(count);
+            //tempNode := inG.getHashNode(dumbAtom.data);
+            //TODO
+            //if (tempNode = nil) AND (dumbAtom.optional = false) then exit;
+            //if tempNode = nil then node := nil;
+            //continue;
           end else
           begin {That option was a winner}
             o := o + i;
@@ -428,11 +289,14 @@ begin
               setLength(child^.children, length(child^.children)+1);
               child^.children[length(child^.children)-1] := Node;
               count := 0;
-              tempNode := inG.getHashNode(dumbAtom.data);
+              matched := true;
+              nodeI := 0;
+              //tempNode := inG.getHashNode(dumbAtom.data);
               continue;
             end;
             break;
           end;
+          nodeI := nodeI+1;
         end;
       end;
     end;

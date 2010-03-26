@@ -25,6 +25,7 @@ type
   end;
 
   PGmrNode = ^RGmrNode;
+  AGmrNode = array of PGmrNode;
   RGmrNode = record
     name: string;
     next: PGmrNode;
@@ -37,7 +38,7 @@ type
   TGmrHash = class
     private
       table: array[0..HashSize] of PGmrNode;
-      current: PGmrNode;
+      Fcurrent: PGmrNode;
     public
       destructor destroy; override;
       procedure add(const lhs, rhs: string); overload;
@@ -46,6 +47,9 @@ type
       procedure addMacro(const macro: string);
       procedure clearCurrent;
       function hashLookup(const key: string): PGmrNode; overload;
+      function get(const key: string): AGmrNode; overload;
+    public
+      property current: PGmrNode read Fcurrent;
       //function hashLookup(const S: string; hint: word; count: word = 0): PGmrNode; overload;
   end;
 
@@ -60,7 +64,7 @@ type
       destructor destroy; override;
       function getHash: TGmrHash;
       function getGoal: PGmrNode;
-      function getHashNode(s: string): PGmrNode;
+      function getHashNode(s: string): AGmrNode;
   end;
 
 implementation
@@ -88,13 +92,13 @@ begin
   setLength(dumbNode.rhs, 0);
   setLength(dumbNode.macros, 0);
   table[hashCode] := dumbNode;
-  current := dumbNode;
+  Fcurrent := dumbNode;
 
   done := false;
   gmr_re.bind(rhs);
 
-  writeln('***'+rhs);
-  writeln(0);
+  //writeln('***'+rhs);
+  //writeln(0);
   while gmr_re.match = true do
   begin
     term := gmr_re.capture[1].captured;
@@ -119,7 +123,7 @@ begin
     begin
       dumbAtom.optional := true;
       dumbAtom.data := gmr_re.capture[2].captured;
-      writeln('opt');
+      //writeln('opt');
     end
     else
     // Zero or more
@@ -127,14 +131,14 @@ begin
     begin
       dumbAtom.star := true;
       dumbAtom.data := gmr_re.capture[3].captured;
-      writeln('star');
+      //writeln('star');
     end
     else
     // One
     if gmr_re.capture[4].captured <> '' then
     begin
       dumbAtom.data := gmr_re.capture[4].captured;
-      writeln('one');
+      //writeln('one');
     end;
     {
     if (term = '') and (dumbAtom.data = '') then
@@ -151,7 +155,26 @@ begin
 end;
 
 procedure TGmrHash.add(const lhs, rhs: string; re: TRegExp);
+var
+  dumbNode: PGmrNode;
+  dumbAtom: PGmrAtom;
+  hashCode: word;
 begin
+  new(dumbNode);
+  dumbNode.name := lhs;
+  hashCode := hash(lhs);
+  dumbNode.next := table[hashCode];
+  setLength(dumbNode.rhs, 1);
+  setLength(dumbNode.macros, 0);
+  table[hashCode] := dumbNode;
+
+  Fcurrent := dumbNode;
+
+  new(dumbAtom);
+  dumbAtom.typed := Matching;
+  dumbAtom.data  := rhs;
+  dumbAtom.re    := re;
+  dumbNode.rhs[0] := dumbAtom;
 end;
 
 procedure TGmrHash.addMacro(const macro: string);
@@ -160,14 +183,32 @@ end;
 
 procedure TGmrHash.clearCurrent;
 begin
-  current := nil;
+  Fcurrent := nil;
 end;
 
 function TGmrHash.hashLookup(const key: string): PGmrNode;
 begin
-  result := table[hash(key)];
-  while (result <> nil) AND (result.name <> key) do
-    result := result.next;
+  result := get(key)[0];
+end;
+
+function TGmrHash.get(const key: string): AGmrNode;
+var
+  dumbNode: PGmrNode;
+  len: cardinal;
+begin
+  len := 0;
+  setLength(result, len);
+  dumbNode := table[hash(key)];
+  while (dumbNode <> nil) do
+  begin
+    if dumbNode.name = key then
+    begin
+      len := len + 1;
+      setLength(result, len);
+      result[len-1] := dumbNode;
+    end;
+    dumbNode := dumbNode.next;
+  end;
     {
     if dumbNode = nil then
       result := nil
@@ -181,12 +222,14 @@ constructor TGmr.init(inF: TFile);
 var s: string;
   posStr: word;
   cleanup: TRegExp;
-  gmrMatchN, gmrMatchM: TRegExp;
+  gmrMatchN, gmrMatchM, settingMatch: TRegExp;
   success: boolean;
 begin
   ghash := TGmrHash.Create;
+  settings := TStringHash.Create;
   goal := nil;
   cleanup := TRegExp.create('\s+', [MultiLine, SingleLine, Extended]);
+  settingMatch := TRegExp.create('^\s*(\w+)\s*=>\s*(.*)$', [Extended]);
   gmrMatchN := TRegExp.create('^\s*(<\w+>)\s*->\s*(.*)$', [Extended]);
   gmrMatchM := TRegExp.create('^\s*(<\w+>)\s*~>\s*m/(.*)/\s*$', [Extended]);
   try
@@ -199,7 +242,13 @@ begin
       {Macros}
       if s[1] <> '<' then
       begin
-        ghash.addMacro(s);
+        if (ghash.current = nil) and settingMatch.match(s) = true then
+        begin
+          settings.append(settingMatch.capture[1].captured, settingMatch.capture[2].captured);
+          //writeln(settingMatch.capture[1].captured);
+        end
+        else
+          ghash.addMacro(s);
         continue;
       end;
 
@@ -226,6 +275,9 @@ begin
       writeln('---'+gmrMatchN.matched);
       }
     end;
+    goal := ghash.get(settings.first('Root'))[0];
+    if goal = nil then
+      raise Exception.create('No root found');
   finally
     inF.Destroy;
   end;
@@ -241,9 +293,9 @@ begin
   result := goal;
 end;
 
-function TGmr.getHashNode(s: string): PGmrNode;
+function TGmr.getHashNode(s: string): AGmrNode;
 begin
-  result := ghash.hashLookup(s);
+  result := ghash.get(s);
 end;
 
 destructor TGmr.destroy;
