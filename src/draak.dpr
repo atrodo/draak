@@ -64,21 +64,21 @@ end;
 procedure errors.Draak1NodeCreate(sender: TObject; s: String);
 begin
   t := t+1;
-  writeln(dupestring('--+', t)+s);
+  writeln(dupestring('--+', t)+'> '+s);
   //nodes.push(Form1.TreeView1.Items.AddChild(TTreeNode(nodes.peek), s));
 end;
 
 procedure errors.Draak1NodeChild(sender: TObject; s: String);
 begin
   //t := t+1;
-  writeln(dupestring('--+', t)+s);
+  writeln(dupestring('--+', t)+'  '+s);
   //TreeView1.Items.AddChild(TTreeNode(nodes.peek), s);
 end;
 
 procedure errors.Draak1NodePop(sender: TObject; s: String);
 begin
   t := t-1;
-  writeln(dupestring('--+', t)+s);
+  writeln(dupestring('--+', t)+'< '+s);
   //TTreeNode(nodes.Peek).Text := TTreeNode(nodes.Peek).Text+s; nodes.Pop;
 end;
 
@@ -142,11 +142,11 @@ begin
     draak1.onAssemble := e.Draak1Assemble;
     draak1.onLink := e.Draak1Assemble;
     draak1.onCompile := e.Draak1Compile;
-    { $ifdef TREETRACE}
+    {$ifdef TREETRACE}
     draak1.onNodeCreate := e.Draak1NodeCreate;
     draak1.onNodeChild := e.Draak1NodeChild;
     draak1.onNodePop := e.Draak1NodePop;
-    { $endif}
+    {$endif}
 //    draak1.parse(Paramstr(1));
     draak1.compile(outFile, Paramstr(1));
   except on Ex: Exception do
@@ -163,6 +163,11 @@ begin
   end;
   {$endif}
   
+  writeln(draak1.success);
+  if draak1.success = true then
+    ExitCode := 0
+  else
+    ExitCode := -1;
   {$define NOCOMPILE}
   {$ifndef NOCOMPILE}
     if draak1.success = true then
