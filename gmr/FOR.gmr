@@ -17,7 +17,6 @@ Whitespace   => [[:blank:]]*
 
 
 <Goal>       -> <Label> <Program> <EOL><Statements>*<Label> <End> <EOL>
-<Statements> ~> m/\s*?\n/
 <Statements> -> <Label> <Statement> <EOL>
 
 <Statement>  -> <Assign>
@@ -59,6 +58,7 @@ Whitespace   => [[:blank:]]*
 <Statement>  -> <Stop>
 <Statement>  -> <Subroutine>
 <Statement>  -> <Write>
+<Statement>  ~> m/[[:blank:]]*/
 
 <Program>    -> PROGRAM <id>
 #<Program>    ~> m/\G(\w)/
