@@ -39,7 +39,9 @@ type
     private
       table: array[0..HashSize] of PGmrNode;
       Fcurrent: PGmrNode;
+      settings: TStringHash;
     public
+      constructor create(in_settings: TStringHash);
       destructor destroy; override;
       procedure add(const lhs, rhs: string); overload;
       procedure add(const lhs, rhs: string; re: TRegExp); overload;
@@ -58,20 +60,27 @@ type
     private
       ghash: TGmrHash;
       goal: PGmrNode;
-      settings: TStringHash;
+      Fsettings: TStringHash;
     public
       constructor init(inF: TFile);
       destructor destroy; override;
       function getHash: TGmrHash;
       function getGoal: PGmrNode;
       function getHashNode(s: string): AGmrNode;
+    public
+      property settings: TStringHash read Fsettings;
   end;
 
 implementation
 
 var
   gmr_re: TRegExp;
-  terminalClean: TRegExp;
+  terminalSpaces: TRegExp;
+
+constructor TGmrHash.create(in_settings: TStringHash);
+begin
+  settings := in_settings;
+end;
 
 destructor TGmrHash.destroy;
 begin
@@ -83,6 +92,7 @@ var dumbNode: PGmrNode;
   done: boolean;
   term: string;
   nonterm: string;
+  whitespace: string;
   dumbAtom: PGmrAtom;
 begin
   new(dumbNode);
@@ -108,9 +118,13 @@ begin
       dumbAtom.typed := terminal;
       dumbAtom.data := term;
       // TODO: this is less than optimal if someone has a \Q as a part of their grammer.
-      term := '\Q'+terminalClean.substitute(term, '\E\s*\Q')+'\E';
+      dumbAtom.data := term;
+      whiteSpace := settings.last('Whitespace');
+      if whiteSpace = '' then
+        whiteSpace := '\s*';
+      term := '\G\Q'+terminalSpaces.substitute(term, '\E'+whiteSpace+'\Q')+'\E';
       //writeln('  '+term);
-      dumbAtom.re   := TRegExp.create(term);
+      dumbAtom.re   := TRegExp.create(term, []);
       setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
       dumbNode.rhs[length(dumbNode.rhs)-1] := dumbAtom;
     end;
@@ -147,8 +161,14 @@ begin
       break;
     end;
     }
-    setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
-    dumbNode.rhs[length(dumbNode.rhs)-1] := dumbAtom;
+    if dumbAtom.data <> '' then
+    begin
+      setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
+      dumbNode.rhs[length(dumbNode.rhs)-1] := dumbAtom;
+    end else
+    begin
+      dispose(dumbAtom);
+    end;
   end;
 
   //add(lhs, rhs, TRegExp.create('^'+rhs, [MultiLine, SingleLine, Extended]));
@@ -225,8 +245,8 @@ var s: string;
   gmrMatchN, gmrMatchM, settingMatch: TRegExp;
   success: boolean;
 begin
-  ghash := TGmrHash.Create;
-  settings := TStringHash.Create;
+  Fsettings := TStringHash.Create;
+  ghash := TGmrHash.Create(Fsettings);
   goal := nil;
   cleanup := TRegExp.create('\s+', [MultiLine, SingleLine, Extended]);
   settingMatch := TRegExp.create('^\s*(\w+)\s*=>\s*(.*)$', [Extended]);
@@ -244,7 +264,7 @@ begin
       begin
         if (ghash.current = nil) and settingMatch.match(s) = true then
         begin
-          settings.append(settingMatch.capture[1].captured, settingMatch.capture[2].captured);
+          Fsettings.append(settingMatch.capture[1].captured, settingMatch.capture[2].captured);
           //writeln(settingMatch.capture[1].captured);
         end
         else
@@ -263,7 +283,7 @@ begin
       else
       if gmrMatchM.match(s) = true then
       begin
-        ghash.add(gmrMatchM.capture[1].captured, gmrMatchM.capture[2].captured, TRegExp.create(gmrMatchM.capture[2].captured, [MultiLine, SingleLine, Extended]));
+        ghash.add(gmrMatchM.capture[1].captured, gmrMatchM.capture[2].captured, TRegExp.create('\G'+gmrMatchM.capture[2].captured, [SingleLine, MultiLine, Extended]));
       end;
       {
       writeln('---'+gmrMatchN.matched);
@@ -275,7 +295,7 @@ begin
       writeln('---'+gmrMatchN.matched);
       }
     end;
-    goal := ghash.get(settings.first('Root'))[0];
+    goal := ghash.get(Fsettings.first('Root'))[0];
     if goal = nil then
       raise Exception.create('No root found');
   finally
@@ -309,5 +329,5 @@ end;
 
 begin
   gmr_re := TRegExp.create('(.*?)(?:{(<\w+>)} | (<\w+>)\* | (<\w+>) | $)', [Extended]);
-  terminalClean := TRegExp.create('\s+', [Global]);
+  terminalSpaces := TRegExp.create('\s+', [Global]);
 end.
