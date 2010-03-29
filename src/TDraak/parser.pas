@@ -335,6 +335,11 @@ begin
           child.line := inS.lineFind(inS.char+o);
         end;
 
+        // There exists an issue where rules like
+        //  -> <id> <ids>*
+        //  -> , <ids>
+        // Will not match "asdf ,that".
+
         //writeln(dumbAtom.star);
         if dumbAtom.optional = true then
           matched := true;
