@@ -1,15 +1,25 @@
 Root         => <Goal>
-Preprocess   => s/^[c*].*$//i
-Preprocess   => s/^(.{0,72})$/$1 /i
+
+# Remove comments
+Preprocess   => s/^[c*].*?\n//i
+
+# Any line without line numbers need protection
+Preprocess   => s/^(.{0,72})\n/$1 /i
+
+# Continuation lines
 Preprocess   => s/^(.{5}) . ([^\n]*?) (\d{8})? \n .{5} \S ([^\n]*?) (\d{8})? \n/$1 $2$4$3\n/
 
+# Remove line numbers
 Preprocess   => s/(\d{8})$//
 #LineNo       => s/(\d{8})$//
 
+Whitespace   => [[:blank:]]*
 
-<Backspace>  -> BACKSPACE ( {<Unit>} <id> {<Err>} {<Iostat>} )
-<Goal>       -> <Program> <EOL> <Statements>* <End> <EOL> .
+
+<Goal>       -> <Label> <Program> <EOL><Statements>*<Label> <End> <EOL>
+<Statements> ~> m/\s*?\n/
 <Statements> -> <Label> <Statement> <EOL>
+
 <Statement>  -> <Assign>
 <Statement>  -> <Assignment>
 <Statement>  -> <Backspace>
@@ -24,7 +34,6 @@ Preprocess   => s/(\d{8})$//
 <Statement>  -> <Dimension>
 <Statement>  -> <Do>
 <Statement>  -> <Double>
-<Statement>  -> <End>
 <Statement>  -> <EndFile>
 <Statement>  -> <Entry>
 <Statement>  -> <Equivalence>
@@ -42,7 +51,6 @@ Preprocess   => s/(\d{8})$//
 <Statement>  -> <Parameter>
 <Statement>  -> <Pause>
 <Statement>  -> <Print>
-<Statement>  -> <Program>
 <Statement>  -> <Read>
 <Statement>  -> <Real>
 <Statement>  -> <Return>
@@ -53,6 +61,7 @@ Preprocess   => s/(\d{8})$//
 <Statement>  -> <Write>
 
 <Program>    -> PROGRAM <id>
+#<Program>    ~> m/\G(\w)/
 <End>        -> END
 
 <Unit>       -> UNIT =
@@ -125,12 +134,12 @@ Preprocess   => s/(\d{8})$//
 <dimDecls>   -> , <dimDecl>
 <dimDecl>    -> {<dimLower>} <num>
 
-<Do>         -> {<doLabel>} <id> = <num> , <num> {<doInc>}
+<Do>         -> DO {<doLabel>} <id> = <num> , <num> {<doInc>}
 <doInc>      -> , <num>
 <doLabel>    -> <id> {<comma>}
 <comma>      -> ,
 
-<Double>     -> DOUBLE PRECISION <vname> <vnames*>
+<Double>     -> DOUBLE PRECISION <vname> <vnames>*
 
 <EndFile>    -> ENDFILE <id>
 <EndFile>    -> ENDFILE ( {<Unit>} <id> {<Err>} {<Iostat>} )
@@ -144,6 +153,7 @@ Preprocess   => s/(\d{8})$//
 
 <Format>     -> FORMAT <fs>
 <fs>         -> ( <flist> <flists>* )
+<fs>         -> <LabelRef>
 <flists>     -> , <flist>
 <flist>      -> {<repeatable>} <ed>
 <flist>      -> {<repeatable>} <fs>
@@ -161,7 +171,7 @@ Preprocess   => s/(\d{8})$//
 <ed>         -> A
 <ed>         -> A<nzUnsignInt>
 #<ned>        ~> m/(?'len'\d+)H(.{\g{len}})/
-<ned>        -> <ChrConst>
+<ned>        -> <chrConst>
 <ned>        -> T<nzUnsignInt>
 <ned>        -> TL<nzUnsignInt>
 <ned>        -> TR<nzUnsignInt>
@@ -171,20 +181,21 @@ Preprocess   => s/(\d{8})$//
 <ned>        -> S
 <ned>        -> SP
 <ned>        -> SS
-<ned>        -> {<signInt>}P
+<ned>        -> {<integer>}P
 <ned>        -> BN
 <ned>        -> BZ
 
 <Function>   -> {<type>} FUNCTION <id> ( <Param> <Params*> )
 
 <GoTo>       -> GOTO <id>
+<GoTo>       -> GO TO <LabelRef>
 #<GoTo>       -> GOTO <id>
 #   "GOTO" ( label | "(" labels")" [ "," ] n | variable [ [ "," ] "(" labels ")" ] ) .
 
 <If>         -> IF ( <expr> ) <ifblock>
-<ifblock>    -> <label> , <label> , <label>
-<If>         -> <Statement>
-<If>         -> THEN <Statements>* <ElseIfs>* ELSE <Statements>* END IF
+<ifblock>    -> <Statement>
+<ifblock>    -> THEN <Statements>* <ElseIfs>* ELSE <Statements>* END IF
+<ifblock>    -> <LabelRef> , <LabelRef> , <LabelRef>
 
 <Implicit>   -> IMPLICIT <impType> <impTypes>* 
 <impTypes>   -> , <impType>
@@ -216,9 +227,9 @@ Preprocess   => s/(\d{8})$//
 <Print>      -> <fs> {<nlist>}
 
 <Read>       -> READ <fs> , {<nlist>}
-<Read>       -> READ {<UNIT>} <id> {<Fmt>} {<End>} {<Err>} {<Iostat>} {<Rec>} {<nlist>}
+<Read>       -> READ {<UNIT>} <id> {<Fmt>} {<EndFile>} {<Err>} {<Iostat>} {<Recl>} {<nlist>}
 
-<Real>       -> <vname> <vnames>*
+<Real>       -> REAL <vname> <vnames>*
 
 <Return>     -> RETURN {<ordinal>}
 
@@ -230,24 +241,24 @@ Preprocess   => s/(\d{8})$//
 <slist>      -> <Commonblock>
 <slist>      -> <id>
 
-<Stop>       -> STOP <message>
+<Stop>       -> STOP {<message>}
 <message>    ~> m/(\d{1,5})/
-<message>    -> <ChrConst>
+<message>    -> <chrConst>
 
 <Subroutine> -> SUBROUTINE <id> <actuals>
 
-<Write>      -> WRITE ( {<Unit>} <id> {<Fmt>} {<Err>} {<Iostat>} {<Rec>}  {<nlist>}
+<Write>      -> WRITE ( {<Unit>} <id> {<Fmt>} {<Err>} {<Iostat>} {<Recl>} ) {<nlist>}
 
 
 <expr>       -> <iexpr> 
 <expr>       -> <aexpr> 
-<expr>       -> <cexpr> 
+#<expr>       -> <cexpr> 
 #<expr>       -> <lexpr> 
 
 <cexpr>      -> <cprimary>
 <cexpr>      -> <cprimary> // <cexpr>
 
-<cprimary>   -> <ChrConst>
+<cprimary>   -> <chrConst>
 <cprimary>   -> <primary>
 <cprimary>   -> <substring>
 <cprimary>   -> ( <cexpr> )
@@ -272,10 +283,10 @@ Preprocess   => s/(\d{8})$//
 <aexpr>      -> <aterm>
 <aexpr>      -> + <aterm>
 <aexpr>      -> - <aterm>
-<aexpr>      -> <aexpr> + <aterm>
-<aexpr>      -> <aepxr> - <aterm>
+<aexpr>      -> <aterm> + <aexpr>
+<aexpr>      -> <aterm> - <aexpr>
 
-<aprimary>   -> <Number>
+<aprimary>   -> <number>
 <aprimary>   -> <primary>
 <aprimary>   -> ( <aexpr> )
 
@@ -296,26 +307,36 @@ Preprocess   => s/(\d{8})$//
 
 <substring>  -> <primary> ( <iexpr> : <iexpr> )
 
-<Label>      ~> m/^(.....)/
+<type>       -> INTEGER
+<type>       -> REAL
+<type>       -> DOUBLE PRECISION
+<type>       -> COMPLEX
+<type>       -> LOGICAL
+<type>       -> CHARACTER {<clength>}
 
-<EOL>        ~> m/\n/
+<Label>      ~> m/([\s\d]{5})/
+<LabelRef>   ~> m/([\d]{1,5})/
 
-<ChrConst>   ~> m/(?:') ([^']*(?:(?:'')[^']*)*) (?:')/
+<EOL>        ~> m/\s*?\n/
+
+<chrConst>   ~> m/(?:') ([^']*(?:(?:'')[^']*)*) (?:')/
 
 <unsignInt>  ~> m/(       \d+                          )/
-<Integer>    ~> m/( [+-]? \d+                          )/
-<Real>       ~> m/( [+-]?     \. \d+ (?: E [+-]? \d+)? )/
-<Real>       ~> m/( [+-]? \d+ \. \d* (?: E [+-]? \d+)? )/
-<Real>       ~> m/( [+-]? \d+        (?: E [+-]? \d+)  )/
-<Double>     ~> m/( [+-]? \d+ \. \d* (?: D [+-]? \d+)  )/
-<Double>     ~> m/( [+-]? \d+        (?: D [+-]? \d+)  )/
+<integer>    ~> m/( [+-]? \d+                          )/
+<real>       ~> m/( [+-]?     \. \d+ (?: E [+-]? \d+)? )/
+<real>       ~> m/( [+-]? \d+ \. \d* (?: E [+-]? \d+)? )/
+<real>       ~> m/( [+-]? \d+        (?: E [+-]? \d+)  )/
+<double>     ~> m/( [+-]? \d+ \. \d* (?: D [+-]? \d+)  )/
+<double>     ~> m/( [+-]? \d+        (?: D [+-]? \d+)  )/
 
 <nzUnsignInt>-> <unsignInt>
-<Number>     -> <Integer>
-<Number>     -> <Real>
-<Number>     -> <Double>
+<number>     -> <integer>
+<number>     -> <real>
+<number>     -> <double>
 
-<ComplexNum> -> ( <Number> , <Number> )
+<complexNum> -> ( <number> , <number> )
 
-<Logical>    -> .TRUE.
-<Logical>    -> .False.
+<logical>    -> .TRUE.
+<logical>    -> .False.
+
+<id>         ~> m/([[:alpha:]]\w{0,6})/
