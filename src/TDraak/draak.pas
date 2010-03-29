@@ -172,9 +172,10 @@ begin
   parse := TParser.Create;
   parse.err := error;
   parse.parse(TFile.init(inFile), Grammar);
-  exit;
   if parse.rootNode <> nil then
   begin
+    finalSuccess := true;
+    {
     if root = nil then
       root := parse.rootNode;
     macro := FMacroClass.create;
@@ -190,6 +191,7 @@ begin
       finalSuccess := true;
     end else begin finalSuccess := false; error.err('Error compiling file.'); end;
     macro.free;
+    }
   end; 
   parse.Free;
   tim := timeCount(t);

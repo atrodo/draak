@@ -77,10 +77,48 @@ end;
 
 constructor TString.create(inF: TFile; startChar: cardinal; inB: string; inMax: PCardinal; settings: TStringHash = nil);
 var a: string; i, o, buffLen: cardinal;
+  preprocess: hashs.strArr;
+  preprocess_re: TRegExp;
+  s_re: TRegExp;
 begin
   f := inF; start := startChar;
   if inB = '' then
   begin
+    FMax := new(pcardinal);
+    FMax^ := 0;
+    parent := true;
+
+    setLength(lineNums, 1);
+    lineNums[0].line := 0;
+    lineNums[0].char := 0;
+    
+    while inF.eof <> true do
+    begin
+      buff := buff+f.getLine+#10;
+      o := length(lineNums);
+      setLength(lineNums, o+1);
+      lineNums[o].char := length(buff);
+      lineNums[o].line := f.lineCount;
+    end;
+
+    if assigned(settings) then
+    begin
+      preprocess := settings.lookup('Preprocess');
+      preprocess_re := TRegExp.create;
+      preprocess_re.bind(buff);
+      s_re := TRegExp.create('s/(.*)/(.*)/[\s\w]*$');
+      for i := 0 to length(preprocess)-1 do
+      begin
+        if s_re.match(preprocess[i]) then
+        begin
+          preprocess_re.compile(s_re.capture[1].captured, [IgnoreCase, MultiLine, SingleLine, Extended, Global]);
+          buff := preprocess_re.substitute(buff, s_re.capture[2].captured);
+        end;
+      end;
+      //raise Exception.create('bah');
+      //writeln(buff);
+    end;
+    {
     FMax := new(pcardinal);
     FMax^ := 0;
     setLength(lineNums, 1);
@@ -101,12 +139,12 @@ begin
       o := o+cardinal(length(a));
 //      buff := buff+f.getLine;
       setLength(lineNums, length(lineNums)+1);
-      lineNums[length(lineNums)-1].char := {length(buff)}o;
+      lineNums[length(lineNums)-1].char := {length(buff)}{o;
       lineNums[length(lineNums)-2].line := f.lineCount;
     end;
     lineNums[length(lineNums)-1].line := f.lineCount;
     setLength(buff, o);
-    parent := true;
+    }
   end else
   begin
     buff := inB;
@@ -155,10 +193,11 @@ end;
 function TString.match(regex: TRegExp; var offset: cardinal): boolean;
 begin
   regex.bind(buff);
-  regex.offset := start + offset;
+  regex.offset := start + offset - 1;
   result := regex.match;
   if result = true then
-    offset := offset + length(regex.matched);
+    offset := regex.capture[0].pos + regex.capture[0].len - start;
+  //writeln('***'+regex.matched+'***');
 end;
 
 destructor TString.destroy;
@@ -174,7 +213,7 @@ var s: TString;
   dumbHash: PGmrNode;
 begin
   lines := 0;
-  s := TString.create(inF, 0, '', nil);
+  s := TString.create(inF, 0, '', nil, inG.settings);
   i := parseDecent(s, inG, inG.getGoal, Node);
   lines := inF.lineCount;
   if i < s.len-1 then i := 0;
@@ -195,7 +234,7 @@ var dumbAtom, tempAtom: PGmrAtom;
   done:    boolean;
   tempS: TString;
 begin
-  err.newNode(inNode.name + '"' + inS.copy(0, 10) + '"');
+  err.newNode(inNode.name); // + '"' + inS.copy(0, 10) + '"');
   partial := false;
   child := new(PParseNode);
   Node := nil;
@@ -208,111 +247,114 @@ begin
   if (dumbAtom.typed = nonTerminal) AND (dumbAtom.data = inNode.name) then
     raise EDraakNoCompile.Create('Infinate recursion on '+inNode.name);
 
-  writeln('aaa');
   try
-  //while dumbAtom <> nil do
-  for atomI := 0 to length(innode.RHS)-1 do
-  begin
-    if inS[1] = #0 then exit;
-    if inS[o] = ' ' then inc(o);
-    dumbAtom := innode.RHS[atomI];
-
-    matched := false;
-    done    := false;
-
-    while done = false do
+    for atomI := 0 to length(innode.RHS)-1 do
     begin
-      case dumbAtom.typed of
-       terminal:
-        begin
-          matched := inS.match(dumbAtom.re, o);
-          if matched then
-          begin
-            err.addNode('-> '+dumbAtom.data);
-            partial := true;
-          end;
-        end;
-       Matching:
-        begin
-          matched := inS.match(dumbAtom.re, o);
-          if matched then
-          begin
-            err.addNode('~> '+dumbAtom.data);
-            partial := true;
-            Node := new(PParseNode);
-            Node.point := inNode;
-            setLength(Node.data, dumbAtom.re.captureLength);
-            for i := 0 to length(Node.data)-1 do
-              Node.data[i] := dumbAtom.re.capture[i].captured;
-            setLength(Node.children, 0);
-          end;
-        end;
-       nonterminal:
-        begin
-          count := 0;
-          tempNode := inG.getHashNode(dumbAtom.data);
-          if length(tempNode) = 0 then
-          begin
-            err.err('No such Non-terminal: ' + dumbAtom.data);
-            exit;
-          end;
-          nodeI := 0;
-          while nodeI < length(tempNode) do
-          begin
-            tempS := inS.getNew(o);
-            i := parseDecent(tempS, inG, tempNode[nodeI], Node);
-            tempS.Free;
-            if i > 0 then
-            begin {That option was a winner}
-              o := o + i;
-              break;
+      if inS[1] = #0 then exit;
+      //if inS[o] = ' ' then inc(o);
+      dumbAtom := innode.RHS[atomI];
 
-              {
-              if dumbAtom.star = true then
-              begin
-                setLength(child^.children, length(child^.children)+1);
-                child^.children[length(child^.children)-1] := Node;
-                count := 0;
-                matched := true;
-                nodeI := 0;
-                //tempNode := inG.getHashNode(dumbAtom.data);
-                continue;
-              end;
-              }
+      done    := false;
+
+      while done = false do
+      begin
+        matched := false;
+        err.addNode('"' + inS.copy(o, 20) + '"');
+        err.addNode(dumbAtom.data);
+        case dumbAtom.typed of
+         terminal:
+          begin
+            matched := inS.match(dumbAtom.re, o);
+            if matched then
+            begin
+              err.addNode('-> '+dumbAtom.data);
+              partial := true;
             end;
-            nodeI := nodeI+1;
+          end;
+         Matching:
+          begin
+            matched := inS.match(dumbAtom.re, o);
+            if matched then
+            begin
+              err.addNode('~> '+dumbAtom.data);
+              partial := true;
+              Node := new(PParseNode);
+              Node.point := inNode;
+              setLength(Node.data, dumbAtom.re.captureLength);
+              for i := 0 to length(Node.data)-1 do
+                Node.data[i] := dumbAtom.re.capture[i].captured;
+              setLength(Node.children, 0);
+            end;
+          end;
+         nonterminal:
+          begin
+            count := 0;
+            tempNode := inG.getHashNode(dumbAtom.data);
+            if length(tempNode) = 0 then
+            begin
+              err.err('No such Non-terminal: ' + dumbAtom.data);
+              done := true;
+              continue;
+            end;
+            nodeI := 0;
+            while nodeI < length(tempNode) do
+            begin
+              tempS := inS.getNew(o);
+              i := parseDecent(tempS, inG, tempNode[nodeI], Node);
+              tempS.Free;
+              if i > 0 then
+              begin {That option was a winner}
+                matched := true;
+                o := o + i;
+                break;
+
+                {
+                if dumbAtom.star = true then
+                begin
+                  setLength(child^.children, length(child^.children)+1);
+                  child^.children[length(child^.children)-1] := Node;
+                  count := 0;
+                  matched := true;
+                  nodeI := 0;
+                  //tempNode := inG.getHashNode(dumbAtom.data);
+                  continue;
+                end;
+                }
+              end;
+              nodeI := nodeI+1;
+            end;
           end;
         end;
-      end;
 
-      done := true;
-      if matched = true then with child^ do
-      begin
-        setLength(children, length(children)+1);
-        children[length(children)-1] := Node;
-        Node := nil;
-        child.line := inS.lineFind(inS.char+o);
-      end;
-
-      if dumbAtom.optional = true then
         done := true;
-      if dumbAtom.star = true then
-      begin
-        if matched = true then
-          done := false
-        else
-          done := true;
+        if matched = true then with child^ do
+        begin
+          setLength(children, length(children)+1);
+          children[length(children)-1] := Node;
+          Node := nil;
+          child.line := inS.lineFind(inS.char+o);
+        end;
+
+        //writeln(dumbAtom.star);
+        if dumbAtom.optional = true then
+          matched := true;
+        if dumbAtom.star = true then
+        begin
+          if matched = true then
+            done := false
+          else
+            done := true;
+          matched := true;
+        end;
+
+        if matched = false then exit;
       end;
     end;
-    if (dumbAtom.typed <> terminal) {AND (Node <> nil)} then with child^ do
-    begin
-    end;
-    //dumbAtom := dumbAtom.next;
-  end;
-  result := o-1;
+    result := o-1;
   finally begin
     if result = 0 then begin
-      err.popNode('!!!');
+      //err.popNode('!!!');
+      err.popNode('!!! '+inNode.name);
       rootdestroy(child); child := nil;
       if assigned(Node) then
         rootDestroy(Node);
