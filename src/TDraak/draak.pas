@@ -12,7 +12,7 @@ interface
 uses
   SysUtils, Classes,
   StrUtils,
-  Contnrs,
+  //Contnrs,
   filedrv,
   gmrdrv,
   Macro,

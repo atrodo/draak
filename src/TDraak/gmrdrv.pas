@@ -133,6 +133,8 @@ begin
       new(dumbAtom);
       dumbAtom.typed := terminal;
       dumbAtom.data := term;
+      dumbAtom.optional := false;
+      dumbAtom.star     := false;
       // TODO: this is less than optimal if someone has a \Q as a part of their grammer.
       dumbAtom.data := term;
       term := '\G\Q'+terminalSpaces.substitute(term, '\E'+whiteSpace+'\Q')+'\E';
@@ -147,6 +149,8 @@ begin
       new(dumbAtom);
       dumbAtom.typed := nonterminal;
       dumbAtom.re := nil;
+      dumbAtom.optional := false;
+      dumbAtom.star     := false;
 
       // If we have optional space, let's record it as such
       if gmr_re.capture[2].captured <> '' then
@@ -221,6 +225,8 @@ begin
   dumbAtom.typed := Matching;
   dumbAtom.data  := rhs;
   dumbAtom.re    := re;
+  dumbAtom.optional := false;
+  dumbAtom.star     := false;
   dumbNode.rhs[0] := dumbAtom;
 end;
 
