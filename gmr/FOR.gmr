@@ -7,7 +7,7 @@ Preprocess   => s/^[c*].*?\n//i
 Preprocess   => s/^(.{0,72})\n/$1 /i
 
 # Continuation lines
-Preprocess   => s/^(.{5}) . ([^\n]*?) (\d{8})? \n .{5} \S ([^\n]*?) (\d{8})? \n/$1 $2$4$3\n/
+Preprocess   => s/^(.{5}) . ([^\n]*?) (\d{8})? \n .{5} [^0\s] ([^\n]*?) (\d{8})? \n/$1 $2$4$3\n/
 
 # Remove line numbers
 Preprocess   => s/(\d{8})$//
@@ -20,7 +20,6 @@ Whitespace   => [[:blank:]]*
 <Statements> -> <Label> <Statement> <EOL>
 
 <Statement>  -> <Assign>
-<Statement>  -> <Assignment>
 <Statement>  -> <Backspace>
 <Statement>  -> <Block>
 <Statement>  -> <Call>
@@ -58,6 +57,7 @@ Whitespace   => [[:blank:]]*
 <Statement>  -> <Stop>
 <Statement>  -> <Subroutine>
 <Statement>  -> <Write>
+<Statement>  -> <Assignment>
 <Statement>  ~> m/[[:blank:]]*/
 
 <Program>    -> PROGRAM <id>
@@ -333,20 +333,20 @@ Whitespace   => [[:blank:]]*
 <type>       -> LOGICAL
 <type>       -> CHARACTER {<clength>}
 
-<Label>      ~> m/([\s\d]{5})/
+<Label>      ~> m/([\s\d]{5})[0\s]/
 <LabelRef>   ~> m/([\d]{1,5})/
 
 <EOL>        ~> m/\s*?\n/
 
 <chrConst>   ~> m/(?:') ([^']*(?:(?:'')[^']*)*) (?:')/
 
-<unsignInt>  ~> m/(       \d+                          )/
-<integer>    ~> m/( [+-]? \d+                          )/
-<real>       ~> m/( [+-]?     \. \d+ (?: E [+-]? \d+)? )/
-<real>       ~> m/( [+-]? \d+ \. \d* (?: E [+-]? \d+)? )/
-<real>       ~> m/( [+-]? \d+        (?: E [+-]? \d+)  )/
-<double>     ~> m/( [+-]? \d+ \. \d* (?: D [+-]? \d+)  )/
-<double>     ~> m/( [+-]? \d+        (?: D [+-]? \d+)  )/
+<unsignInt>  ~> m/(       [[:blank:]\d]+                          )/
+<integer>    ~> m/( [+-]? [[:blank:]\d]+                          )/
+<real>       ~> m/( [+-]?     \. [[:blank:]\d]+ (?: E [+-]? [[:blank:]\d]+)? )/
+<real>       ~> m/( [+-]? [[:blank:]\d]+ \. [[:blank:]\d]* (?: E [+-]? [[:blank:]\d]+)? )/
+<real>       ~> m/( [+-]? [[:blank:]\d]+        (?: E [+-]? [[:blank:]\d]+)  )/
+<double>     ~> m/( [+-]? [[:blank:]\d]+ \. [[:blank:]\d]* (?: D [+-]? [[:blank:]\d]+)  )/
+<double>     ~> m/( [+-]? [[:blank:]\d]+        (?: D [+-]? [[:blank:]\d]+)  )/
 
 <nzUnsignInt>-> <unsignInt>
 <number>     -> <integer>
@@ -358,4 +358,5 @@ Whitespace   => [[:blank:]]*
 <logical>    -> .TRUE.
 <logical>    -> .False.
 
-<id>         ~> m/([[:alpha:]]\w{0,6})/
+<id>         ~> m/([[:alpha:]](?:[[:blank:]]*\w){0,5})/
+
