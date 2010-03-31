@@ -128,7 +128,7 @@ begin
   draak1 := TDraak.create(nil);
   draak1.Flags := [timeStat];
   e := Errors.Create;
-  outFile := TFileStream.Create(noext+'.asm', fmCreate);
+  //outFile := TFileStream.Create(noext+'.asm', fmCreate);
   try
     {$ifdef WIN32}
     draak1.SearchPath := '.;'+cdir+';'+cdir+PathDelim+ext;
