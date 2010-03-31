@@ -249,11 +249,13 @@ Whitespace   => [[:blank:]]*
 
 <Write>      -> WRITE ( {<Unit>} <id> {<Fmt>} {<Err>} {<Iostat>} {<Recl>} ) {<nlist>}
 
+<constant>   -> <kexpr>
 
 <expr>       -> <iexpr> 
 <expr>       -> <aexpr> 
 #<expr>       -> <cexpr> 
 #<expr>       -> <lexpr> 
+#<expr>       -> <kexpr> 
 
 <cexpr>      -> <cprimary>
 <cexpr>      -> <cprimary> // <cexpr>
@@ -300,6 +302,23 @@ Whitespace   => [[:blank:]]*
 <primary>    -> <id>
 <primary>    -> <arrayelem>
 <primary>    -> <id> <actuals>
+
+# Constants
+<kexpr>      -> <kterm>
+<kexpr>      -> + <kterm>
+<kexpr>      -> - <kterm>
+<kexpr>      -> <kterm> + <kexpr>
+<kexpr>      -> <kterm> - <kexpr>
+
+<kprimary>   -> <number>
+<kprimary>   -> ( <kexpr> )
+
+<kfactor>    -> <kprimary>
+<kfactor>    -> <kprimary> ** <kfactor>
+
+<kterm>      -> <kfactor>
+<kterm>      -> <kfactor> / <kterm>
+<kterm>      -> <kfactor> * <kterm>
 
 <arrayelem>  -> <id> ( <subscript> <subscripts>* )
 <subscripts> -> , <subscript>
