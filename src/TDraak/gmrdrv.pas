@@ -94,6 +94,8 @@ var dumbNode: PGmrNode;
   nonterm: string;
   whitespace: string;
   dumbAtom: PGmrAtom;
+  hasNonTerm: boolean;
+  i: cardinal;
 begin
   new(dumbNode);
   dumbNode.name := lhs;
@@ -107,11 +109,25 @@ begin
   done := false;
   gmr_re.bind(rhs);
 
+  whiteSpace := settings.last('Whitespace');
+  if whiteSpace = '' then
+    whiteSpace := '\s*';
+
   //writeln('***'+rhs);
   //writeln(0);
   while gmr_re.match = true do
   begin
     term := gmr_re.capture[1].captured;
+
+    hasNonTerm := false;
+
+    for i := 3 to 5 do
+      if gmr_re.capture[i].captured <> '' then
+        hasNonTerm := true;
+
+    if hasNonTerm = false then
+      term := term + gmr_re.capture[2].captured;
+
     if term <> '' then
     begin
       new(dumbAtom);
@@ -119,9 +135,6 @@ begin
       dumbAtom.data := term;
       // TODO: this is less than optimal if someone has a \Q as a part of their grammer.
       dumbAtom.data := term;
-      whiteSpace := settings.last('Whitespace');
-      if whiteSpace = '' then
-        whiteSpace := '\s*';
       term := '\G\Q'+terminalSpaces.substitute(term, '\E'+whiteSpace+'\Q')+'\E';
       //writeln('  '+term);
       dumbAtom.re   := TRegExp.create(term, []);
@@ -129,30 +142,42 @@ begin
       dumbNode.rhs[length(dumbNode.rhs)-1] := dumbAtom;
     end;
 
-    new(dumbAtom);
-    dumbAtom.typed := nonterminal;
+    if hasNonTerm = true then
+    begin
+      new(dumbAtom);
+      dumbAtom.typed := nonterminal;
+      dumbAtom.re := nil;
 
-    // Optional
-    if gmr_re.capture[2].captured <> '' then
-    begin
-      dumbAtom.optional := true;
-      dumbAtom.data := gmr_re.capture[2].captured;
-      //writeln('opt');
-    end
-    else
-    // Zero or more
-    if gmr_re.capture[3].captured <> '' then
-    begin
-      dumbAtom.star := true;
-      dumbAtom.data := gmr_re.capture[3].captured;
-      //writeln('star');
-    end
-    else
-    // One
-    if gmr_re.capture[4].captured <> '' then
-    begin
-      dumbAtom.data := gmr_re.capture[4].captured;
-      //writeln('one');
+      // If we have optional space, let's record it as such
+      if gmr_re.capture[2].captured <> '' then
+      begin
+        dumbAtom.re := TRegExp.create(whiteSpace, []);
+      end;
+
+      // Optional
+      if gmr_re.capture[3].captured <> '' then
+      begin
+        dumbAtom.optional := true;
+        dumbAtom.data := gmr_re.capture[3].captured;
+        //writeln('opt');
+      end
+      else
+      // Zero or more
+      if gmr_re.capture[4].captured <> '' then
+      begin
+        dumbAtom.star := true;
+        dumbAtom.data := gmr_re.capture[4].captured;
+        //writeln('star');
+      end
+      else
+      // One
+      if gmr_re.capture[5].captured <> '' then
+      begin
+        dumbAtom.data := gmr_re.capture[5].captured;
+        //writeln('one');
+      end;
+      setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
+      dumbNode.rhs[length(dumbNode.rhs)-1] := dumbAtom;
     end;
     {
     if (term = '') and (dumbAtom.data = '') then
@@ -161,6 +186,7 @@ begin
       break;
     end;
     }
+    {
     if dumbAtom.data <> '' then
     begin
       setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
@@ -169,6 +195,7 @@ begin
     begin
       dispose(dumbAtom);
     end;
+    }
   end;
 
   //add(lhs, rhs, TRegExp.create('^'+rhs, [MultiLine, SingleLine, Extended]));
@@ -328,6 +355,6 @@ end;
 {* parsing it into memory, and giving the apporiate rule to those that ask.   *}
 
 begin
-  gmr_re := TRegExp.create('(.*?)(?:{(<\w+>)} | (<\w+>)\* | (<\w+>) | $)', [Extended]);
+  gmr_re := TRegExp.create('(.*?)(\s*)(?:{(<\w+>)} | (<\w+>)\* | (<\w+>) | $)', [Extended]);
   terminalSpaces := TRegExp.create('\s+', [Global]);
 end.

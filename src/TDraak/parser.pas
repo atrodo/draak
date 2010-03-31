@@ -289,6 +289,12 @@ begin
          nonterminal:
           begin
             count := 0;
+
+            // This is an optional match, normally just for taking care
+            // of spaces in stars
+            if dumbAtom.re <> nil then
+              inS.match(dumbAtom.re, o);
+
             tempNode := inG.getHashNode(dumbAtom.data);
             if length(tempNode) = 0 then
             begin
