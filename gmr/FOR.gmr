@@ -293,11 +293,11 @@ Whitespace   => [[:blank:]]*
 <lexpr>      -> <ldisjunct> .NEQV. <lexpr>
 <lexpr>      -> <ldisjunct> .EQV. <lexpr>
 <ldisjunct>  -> <lterm>
-<ldisjunct>  -> <lterm>     .OR   <ldisjunct>
+<ldisjunct>  -> <lterm>     .OR.  <ldisjunct>
 <lterm>      -> <lfactor>
 <lterm>      -> <lfactor>   .AND. <lterm>
 <lfactor>    -> <lprimary>
-<lfactor>    -> <lprimary>  .NOT. <lfactor>
+<lfactor>    -> .NOT. <lprimary>
 
 <lprimary>   -> <logical>
 <lprimary>   -> <id>
