@@ -84,9 +84,12 @@ Whitespace   => [[:blank:]]*
 <Fmt>        -> , {<fmteq>} <fs>
 <fmteq>      -> FMT =
 
+<Assignment> -> <arrayelem> = <lexpr>
+<Assignment> -> <id> = <lexpr>
+<Assignment> -> <arrayelem> = <expr>
 <Assignment> -> <id> = <expr>
 
-<Assign>     -> ASSIGN <id> TO <id>
+<Assign>     -> ASSIGN <LabelRef> TO <id>
 
 <Backspace>  -> BACKSPACE <id>
 <Backspace>  -> BACKSPACE ( {<Unit>} <id> {<Err>} {<Iostat>} )
@@ -115,7 +118,7 @@ Whitespace   => [[:blank:]]*
 <Complex>    -> COMPLEX <vname> <vnames>*
 <vnames>     -> , <vname>
 <vname>      -> <id> {<dim>}
-<dim>        -> ( <id> )
+#<dim>        -> ( <id> )
 
 <Continue>   -> CONTINUE
 #   "FORMAT" [editlist] .
@@ -130,12 +133,14 @@ Whitespace   => [[:blank:]]*
 
 <Dimension>  -> DIMENSION <dimDefine> <dimDefines>*
 <dimDefines> -> , <dimDefine>
-<dimDefine>  -> <id> ( <dimDecl> <dimDecls>* )
+<dimDefine>  -> <id> <dim>
+<dim>        -> ( <dimDecl> <dimDecls>* )
 <dimDecls>   -> , <dimDecl>
-<dimDecl>    -> {<dimLower>} <num>
+<dimDecl>    -> {<dimLower>} <constant>
+<dimLower>   -> <constant> :
 
-<Do>         -> DO {<doLabel>} <id> = <num> , <num> {<doInc>}
-<doInc>      -> , <num>
+<Do>         -> DO {<LabelRef>} <id> = <number> , <number> {<doInc>}
+<doInc>      -> , <number>
 <doLabel>    -> <id> {<comma>}
 <comma>      -> ,
 
@@ -187,15 +192,18 @@ Whitespace   => [[:blank:]]*
 
 <Function>   -> {<type>} FUNCTION <id> ( <Param> <Params*> )
 
-<GoTo>       -> GOTO <id>
+#<GoTo>       -> GOTO <id>
 <GoTo>       -> GO TO <LabelRef>
+<GoTo>       -> GO TO <id>
+<GoTo>       -> GO TO <id> {<comma>} ( <LabelRef> <LabelRefs>* )
+<GoTo>       -> GO TO ( <LabelRef> <LabelRefs>* ) {<comma>} <id>
 #<GoTo>       -> GOTO <id>
 #   "GOTO" ( label | "(" labels")" [ "," ] n | variable [ [ "," ] "(" labels ")" ] ) .
 
-<If>         -> IF ( <expr> ) <ifblock>
+<If>         -> IF ( <lexpr> ) <ifblock>
+<If>         -> IF ( <expr> ) <LabelRef> , <LabelRef> , <LabelRef>
 <ifblock>    -> <Statement>
 <ifblock>    -> THEN <Statements>* <ElseIfs>* ELSE <Statements>* END IF
-<ifblock>    -> <LabelRef> , <LabelRef> , <LabelRef>
 
 <Implicit>   -> IMPLICIT <impType> <impTypes>* 
 <impTypes>   -> , <impType>
@@ -251,11 +259,80 @@ Whitespace   => [[:blank:]]*
 
 <constant>   -> <kexpr>
 
-<expr>       -> <iexpr> 
-<expr>       -> <aexpr> 
+#<expr>       -> <iexpr> 
+#<expr>       -> <aexpr> 
 #<expr>       -> <cexpr> 
 #<expr>       -> <lexpr> 
 #<expr>       -> <kexpr> 
+
+##############################
+
+#<expr>       -> <lexpr>
+<expr>       -> <term>
+<expr>       -> + <term>
+<expr>       -> - <term>
+<expr>       -> <term> + <expr>
+<expr>       -> <term> - <expr>
+
+<term>       -> <factor>
+<term>       -> <factor> / <term>
+<term>       -> <factor> * <term>
+
+<factor>     -> <primary>
+<factor>     -> <primary> ** <factor>
+
+<primary>    -> <id>
+<primary>    -> <number>
+<primary>    -> ( <expr> )
+<primary>    -> <arrayelem>
+<primary>    -> <id> <actuals>
+
+##############################
+
+<lexpr>      -> <ldisjunct>
+<lexpr>      -> <ldisjunct> .NEQV. <lexpr>
+<lexpr>      -> <ldisjunct> .EQV. <lexpr>
+<ldisjunct>  -> <lterm>
+<ldisjunct>  -> <lterm>     .OR   <ldisjunct>
+<lterm>      -> <lfactor>
+<lterm>      -> <lfactor>   .AND. <lterm>
+<lfactor>    -> <lprimary>
+<lfactor>    -> <lprimary>  .NOT. <lfactor>
+
+<lprimary>   -> <logical>
+<lprimary>   -> <id>
+<lprimary>   -> <arrayelem>
+<lprimary>   -> <id> <actuals>
+<lprimary>   -> <expr> <relop> <expr>
+<lprimary>   -> ( <lexpr> )
+
+<relop>      -> .LT.
+<relop>      -> .LE.
+<relop>      -> .EQ.
+<relop>      -> .NE.
+<relop>      -> .GT.
+<relop>      -> .GE.
+
+##############################
+
+<iexpr>      -> <iterm>
+<iexpr>      -> + <iterm>
+<iexpr>      -> - <iterm>
+<iexpr>      -> <iterm> + <iexpr>
+<iexpr>      -> <iterm> - <iexpr>
+
+<iterm>      -> <ifactor>
+<iterm>      -> <ifactor> / <iterm>
+<iterm>      -> <ifactor> * <iterm>
+
+<ifactor>    -> <iprimary>
+<ifactor>    -> <iprimary> ** <ifactor>
+
+<iprimary>   -> <Integer>
+<iprimary>   -> <iprimary>
+<iprimary>   -> ( <iexpr> )
+
+##############################
 
 <cexpr>      -> <cprimary>
 <cexpr>      -> <cprimary> // <cexpr>
@@ -264,23 +341,6 @@ Whitespace   => [[:blank:]]*
 <cprimary>   -> <primary>
 <cprimary>   -> <substring>
 <cprimary>   -> ( <cexpr> )
-
-<iexpr>      -> <iterm>
-<iexpr>      -> + <iterm>
-<iexpr>      -> - <iterm>
-<iexpr>      -> <iexpr> + <iterm>
-<iexpr>      -> <iepxr> - <iterm>
-
-<iprimary>   -> <Integer>
-<iprimary>   -> <iprimary>
-<iprimary>   -> ( <iexpr> )
-
-<ifactor>    -> <iprimary>
-<ifactor>    -> <iprimary> ** <ifactor>
-
-<iterm>      -> <ifactor>
-<iterm>      -> <ifactor> / <iterm>
-<iterm>      -> <ifactor> * <iterm>
 
 <aexpr>      -> <aterm>
 <aexpr>      -> + <aterm>
@@ -299,9 +359,9 @@ Whitespace   => [[:blank:]]*
 <aterm>      -> <afactor> / <aterm>
 <aterm>      -> <afactor> * <aterm>
 
-<primary>    -> <id>
-<primary>    -> <arrayelem>
-<primary>    -> <id> <actuals>
+#<primary>    -> <id>
+#<primary>    -> <arrayelem>
+#<primary>    -> <id> <actuals>
 
 # Constants
 <kexpr>      -> <kterm>
@@ -312,6 +372,7 @@ Whitespace   => [[:blank:]]*
 
 <kprimary>   -> <number>
 <kprimary>   -> ( <kexpr> )
+<kprimary>   -> <logical>
 
 <kfactor>    -> <kprimary>
 <kfactor>    -> <kprimary> ** <kfactor>
@@ -334,19 +395,21 @@ Whitespace   => [[:blank:]]*
 <type>       -> CHARACTER {<clength>}
 
 <Label>      ~> m/([\s\d]{5})[0\s]/
+
+<LabelRefs>  -> , <LabelRef>
 <LabelRef>   ~> m/([\d]{1,5})/
 
 <EOL>        ~> m/\s*?\n/
 
 <chrConst>   ~> m/(?:') ([^']*(?:(?:'')[^']*)*) (?:')/
 
-<unsignInt>  ~> m/(       [[:blank:]\d]+                          )/
-<integer>    ~> m/( [+-]? [[:blank:]\d]+                          )/
-<real>       ~> m/( [+-]?     \. [[:blank:]\d]+ (?: E [+-]? [[:blank:]\d]+)? )/
-<real>       ~> m/( [+-]? [[:blank:]\d]+ \. [[:blank:]\d]* (?: E [+-]? [[:blank:]\d]+)? )/
-<real>       ~> m/( [+-]? [[:blank:]\d]+        (?: E [+-]? [[:blank:]\d]+)  )/
-<double>     ~> m/( [+-]? [[:blank:]\d]+ \. [[:blank:]\d]* (?: D [+-]? [[:blank:]\d]+)  )/
-<double>     ~> m/( [+-]? [[:blank:]\d]+        (?: D [+-]? [[:blank:]\d]+)  )/
+<unsignInt>  ~> m/(       \d+                          )/
+<integer>    ~> m/( [+-]? \d+                          )/
+<real>       ~> m/( [+-]?     \. \d+ (?: E [+-]? \d+)? )/
+<real>       ~> m/( [+-]? \d+ \. \d* (?: E [+-]? \d+)? )/
+<real>       ~> m/( [+-]? \d+        (?: E [+-]? \d+)  )/
+<double>     ~> m/( [+-]? \d+ \. \d* (?: D [+-]? \d+)  )/
+<double>     ~> m/( [+-]? \d+        (?: D [+-]? \d+)  )/
 
 <nzUnsignInt>-> <unsignInt>
 <number>     -> <integer>
@@ -356,7 +419,7 @@ Whitespace   => [[:blank:]]*
 <complexNum> -> ( <number> , <number> )
 
 <logical>    -> .TRUE.
-<logical>    -> .False.
+<logical>    -> .FALSE.
 
-<id>         ~> m/([[:alpha:]](?:[[:blank:]]*\w){0,5})/
+<id>         ~> m/([[:alpha:]]\w{0,6})/
 
