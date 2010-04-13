@@ -111,8 +111,8 @@ Whitespace   => [[:blank:]]*
 
 <Common>     -> COMMON {<Commonblock>} <nlist> <MoreCommon>*
 <Commonblock>-> /<id>/
-<nlist>      -> <id> <nlists>*
-<nlists>     -> , <id>
+<nlist>      -> <vname> <nlists>*
+<nlists>     -> , <vname>
 <MoreCommon> -> <Commonblock> <nlist>
 
 <Complex>    -> COMPLEX <vname> <vnames>*
