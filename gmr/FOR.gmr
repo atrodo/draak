@@ -383,6 +383,7 @@ Whitespace   => [[:blank:]]*
 
 <arrayelem>  -> <id> ( <subscript> <subscripts>* )
 <subscripts> -> , <subscript>
+<subscript>  -> <lexpr>
 <subscript>  -> <expr>
 
 <substring>  -> <primary> ( <iexpr> : <iexpr> )
