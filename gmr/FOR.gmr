@@ -269,8 +269,8 @@ Whitespace   => [[:blank:]]*
 
 #<expr>       -> <lexpr>
 <expr>       -> <term>
-<expr>       -> + <term>
-<expr>       -> - <term>
+<expr>       -> + <expr>
+<expr>       -> - <expr>
 <expr>       -> <term> + <expr>
 <expr>       -> <term> - <expr>
 
