@@ -45,11 +45,23 @@ type
     function match(regex: TRegExp; var offset: cardinal): boolean;
   end;
 
+  memostatus = (unknown, inprogress, success, failure);
+  RMemopad = array of record
+    charno: cardinal;
+    nodes: array of record
+      inNode: PGmrNode;
+      status: memostatus;
+    end;
+  end;
+
   TParser = class
     rootNode: PParseNode;
     err: TError;
     lines: cardinal;
-    alphanum, numbers, hexs, bins, octs: set of char;
+    memopad: RMemopad;
+    function checkpad(charno: cardinal; inNode: PGmrNode): memostatus;
+    procedure addmemo(charno: cardinal; inNode: PGmrNode; status: memostatus);
+    //alphanum, numbers, hexs, bins, octs: set of char;
     procedure parse(inF: TFile; inG: TGmr);
     function parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode): word;
   end;
@@ -207,6 +219,79 @@ begin
   setLength(lineNums, 0);
 end;
 
+function TParser.checkpad(charno: cardinal; inNode: PGmrNode): memostatus;
+var
+  i, o: cardinal;
+begin;
+  result := unknown;
+
+  if length(memopad) > 0 then
+    for i := 0 to length(memopad)-1 do
+    begin
+      if memopad[i].charno = charno then
+      begin
+        with memopad[i] do
+        begin
+          if length(nodes) > 0 then
+            for o := 0 to length(nodes)-1 do
+            begin
+              if nodes[o].inNode = inNode then
+              begin
+                result := nodes[o].status;
+                exit;
+              end;
+            end;
+        end;
+      end;
+    end
+end;
+
+procedure TParser.addmemo(charno: cardinal; inNode: PGmrNode; status: memostatus);
+var
+  i, o: cardinal;
+begin;
+  if length(memopad) > 0 then
+    for i := 0 to length(memopad)-1 do
+    begin
+      if memopad[i].charno = charno then
+      begin
+        with memopad[i] do
+        begin
+          if length(nodes) > 0 then
+            for o := 0 to length(nodes)-1 do
+            begin
+              if nodes[o].inNode = inNode then
+              begin
+                nodes[o].status := status;
+                exit;
+              end;
+            end;
+
+          // No matching memopad
+          o := length(nodes);
+          setlength(nodes, o+1);
+          nodes[o].inNode := inNode;
+          nodes[o].status := status;
+          exit;
+        end;
+      end;
+    end;
+
+  // Nothing found
+  i := length(memopad);
+  setlength(memopad, i+1);
+  memopad[i].charno := charno;
+  with memopad[i] do
+  begin
+    o := length(nodes);
+    setlength(nodes, o+1);
+    nodes[o].inNode := inNode;
+    nodes[o].status := status;
+    exit;
+  end;
+
+end;
+
 procedure TParser.parse(inF: TFile; inG: TGmr);
 var s: TString;
   i: word; Node: PParseNode;
@@ -220,6 +305,7 @@ begin
   if i = 0 then err.err('Did not Parse. Error around "'+s.copy(s.max-10, 20)+'" Line '+intToStr(s.lineFind(s.max)));
   if i <> 0 then rootNode := Node else Node := nil;
   s.Free;
+  writeln(length(memopad));
 end;
 
 function TParser.parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode): word;
@@ -234,7 +320,26 @@ var dumbAtom, tempAtom: PGmrAtom;
   done:    boolean;
   tempS: TString;
 begin
+  //write(inNode.id); write(' : '); write(inS.char); writeln(' : '+inNode.name);
   err.newNode(inNode.name); // + '"' + inS.copy(0, 10) + '"');
+
+  result := 0;
+
+  {$DEFINE MEMOPAD}
+  {$ifdef MEMOPAD}
+  case checkPad(inS.char, inNode) of
+    unknown: ;
+    success: ;
+    failure: exit;
+    inprogress:
+      begin
+        raise EDraakNoCompile.Create('Infinate recursion on '+inNode.name);
+      end;
+  end;
+
+  addmemo(inS.char, inNode, inprogress);
+  {$endif}
+
   partial := false;
   child := new(PParseNode);
   Node := nil;
@@ -242,7 +347,6 @@ begin
   child.point := inNode;
   //dumbAtom := innode.RHS;
   o := 1;
-  result := 0;
   dumbAtom := innode.RHS[0];
   if (dumbAtom.typed = nonTerminal) AND (dumbAtom.data = inNode.name) then
     raise EDraakNoCompile.Create('Infinate recursion on '+inNode.name);
@@ -363,14 +467,24 @@ begin
     end;
     result := o-1;
   finally begin
-    if result = 0 then begin
+    if result = 0 then
+    begin
+      {$ifdef MEMOPAD}
+      addmemo(inS.char, inNode, failure);
+      {$endif}
       //err.popNode('!!!');
       err.popNode('!!! '+inNode.name);
       rootdestroy(child); child := nil;
       if assigned(Node) then
         rootDestroy(Node);
       Node := nil;
-    end else err.popNode('');
+    end else
+    begin
+      {$ifdef MEMOPAD}
+      addmemo(inS.char, inNode, success);
+      {$endif}
+      err.popNode('');
+    end;
     if (partial = true) AND (result = 0) then {err('Danger Will Robinson, Danger ' + inNode.name)}; { $ENDIF}
   end; end;
 end;
