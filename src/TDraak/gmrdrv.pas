@@ -27,6 +27,7 @@ type
   PGmrNode = ^RGmrNode;
   AGmrNode = array of PGmrNode;
   RGmrNode = record
+    id: cardinal;
     name: string;
     next: PGmrNode;
     rhs : array of PGmrAtom;
@@ -86,6 +87,13 @@ destructor TGmrHash.destroy;
 begin
 end;
 
+var ccc: cardinal;
+function current_id: cardinal;
+begin
+  inc(ccc);
+  result := ccc;
+end;
+
 procedure TGmrHash.add(const lhs, rhs: string);
 var dumbNode: PGmrNode;
   hashCode: word;
@@ -98,6 +106,7 @@ var dumbNode: PGmrNode;
   i: cardinal;
 begin
   new(dumbNode);
+  dumbNode.id := current_id;
   dumbNode.name := lhs;
   hashCode := hash(lhs);
   dumbNode.next := table[hashCode];
@@ -212,6 +221,7 @@ var
   hashCode: word;
 begin
   new(dumbNode);
+  dumbNode.id := current_id;
   dumbNode.name := lhs;
   hashCode := hash(lhs);
   dumbNode.next := table[hashCode];
