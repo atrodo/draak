@@ -15,13 +15,23 @@ Preprocess   => s/(\d{8})$//
 
 Whitespace   => [[:blank:]]*
 
+<Goal>       -> <ExeUnit>*
 
-<Goal>       -> <Label> <Program> <EOL><Statements>*<Label> <End> <EOL>
+<ExeUnit>    -> <Label> <Program> <EOL><Statements>*<Label> <End> <EOL>
+<ExeUnit>    -> <Label> <Function> <EOL><Statements>*<Label> <End> <EOL>
+<ExeUnit>    -> <Label> <Subroutine> <EOL><Statements>*<Label> <End> <EOL>
+
+#TODO
+<ExeUnit>    -> <Label> <Block> <EOL><Statements>*<Label> <End> <EOL>
+
+#<Statement>  -> <Block>
+#<Statement>  -> <Function>
+#<Statement>  -> <Subroutine>
+
 <Statements> -> <Label> <Statement> <EOL>
 
 <Statement>  -> <Assign>
 <Statement>  -> <Backspace>
-<Statement>  -> <Block>
 <Statement>  -> <Call>
 <Statement>  -> <Character>
 <Statement>  -> <Close>
@@ -37,7 +47,6 @@ Whitespace   => [[:blank:]]*
 <Statement>  -> <Equivalence>
 <Statement>  -> <External>
 <Statement>  -> <Format>
-<Statement>  -> <Function>
 <Statement>  -> <GoTo>
 <Statement>  -> <If>
 <Statement>  -> <Implicit>
@@ -55,7 +64,6 @@ Whitespace   => [[:blank:]]*
 <Statement>  -> <Rewind>
 <Statement>  -> <Save>
 <Statement>  -> <Stop>
-<Statement>  -> <Subroutine>
 <Statement>  -> <Write>
 <Statement>  -> <Assignment>
 <Statement>  ~> m/[[:blank:]]*/
@@ -97,8 +105,8 @@ Whitespace   => [[:blank:]]*
 <Block>      -> BLOCK DATA {<id>}
 
 <Call>       -> CALL <id> {<actuals>}
-<actuals>    -> ( <Param> <Params*> )
-<Param>      -> <id>
+<actuals>    -> ( <Param> <Params>* )
+<Param>      -> <expr>
 <Params>     -> , <Param>
 
 <Character>  -> CHARACTER {<cchars>} <id> {<clength>} {<cdim>} {<cvname>}
@@ -239,7 +247,7 @@ Whitespace   => [[:blank:]]*
 
 <Real>       -> REAL <vname> <vnames>*
 
-<Return>     -> RETURN {<ordinal>}
+<Return>     -> RETURN {<integer>}
 
 <Rewind>     -> REWIND <id>
 <Rewind>     -> REWIND ( {<Unit>} <id> {<Err>} {<Iostat>} )
