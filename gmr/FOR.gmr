@@ -198,7 +198,7 @@ Whitespace   => [[:blank:]]*
 <ned>        -> BN
 <ned>        -> BZ
 
-<Function>   -> {<type>} FUNCTION <id> ( <Param> <Params*> )
+<Function>   -> {<type>} FUNCTION <id> <actuals>
 
 #<GoTo>       -> GOTO <id>
 <GoTo>       -> GO TO <LabelRef>
