@@ -321,8 +321,6 @@ var dumbAtom, tempAtom: PGmrAtom;
   tempS: TString;
 begin
   //write(inNode.id); write(' : '); write(inS.char); writeln(' : '+inNode.name);
-  err.newNode(inNode.name); // + '"' + inS.copy(0, 10) + '"');
-
   result := 0;
 
   {$DEFINE MEMOPAD}
@@ -339,6 +337,8 @@ begin
 
   addmemo(inS.char, inNode, inprogress);
   {$endif}
+
+  err.newNode(inNode.name); // + '"' + inS.copy(0, 10) + '"');
 
   partial := false;
   child := new(PParseNode);
