@@ -209,7 +209,13 @@ begin
   result := regex.match;
   if result = true then
     offset := regex.capture[0].pos + regex.capture[0].len - start;
-  //writeln('***'+regex.matched+'***');
+  {
+  writeln('***'+regex.matched+'***');
+  writeln(regex.capture[0].pos);
+  writeln(regex.capture[0].len);
+  writeln(start);
+  writeln('***'+regex.matched+'***');
+  }
 end;
 
 destructor TString.destroy;
@@ -444,11 +450,6 @@ begin
           Node := nil;
           child.line := inS.lineFind(inS.char+o);
         end;
-
-        // There exists an issue where rules like
-        //  -> <id> <ids>*
-        //  -> , <ids>
-        // Will not match "asdf ,that".
 
         //writeln(dumbAtom.star);
         if dumbAtom.optional = true then
