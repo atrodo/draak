@@ -28,7 +28,7 @@ Whitespace   => [[:blank:]]*
 #<Statement>  -> <Function>
 #<Statement>  -> <Subroutine>
 
-<Statements> -> <Label> <Statement> <EOL>
+<Statements> -> <Label> {<Statement>} <EOL>
 
 <Statement>  -> <Assign>
 <Statement>  -> <Backspace>
@@ -66,7 +66,6 @@ Whitespace   => [[:blank:]]*
 <Statement>  -> <Stop>
 <Statement>  -> <Write>
 <Statement>  -> <Assignment>
-<Statement>  ~> m/[[:blank:]]*/
 
 <Program>    -> PROGRAM <id>
 #<Program>    ~> m/\G(\w)/
