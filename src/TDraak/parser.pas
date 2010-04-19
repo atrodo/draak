@@ -302,7 +302,7 @@ begin
   i := parseDecent(s, inG, inG.getGoal, Node);
   lines := inF.lineCount;
   if i < s.len-1 then i := 0;
-  if i = 0 then err.err('Did not Parse. Error around "'+s.copy(s.max-10, 20)+'" Line '+intToStr(s.lineFind(s.max)));
+  if i = 0 then err.err('Did not Parse. Error around "'+s.copy(s.max-20, 40)+'" Line '+intToStr(s.lineFind(s.max)));
   if i <> 0 then rootNode := Node else Node := nil;
   s.Free;
   writeln(length(memopad));
