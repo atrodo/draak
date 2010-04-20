@@ -114,8 +114,8 @@ Whitespace   => [[:blank:]]*
 <Params>     -> , <Param>
 
 <Character>  -> CHARACTER {<cchars>} <id> {<clength>} {<cdim>} {<cvname>}
-<cchars>     -> * <id>
-<clength>    -> * <id>
+<cchars>     -> * <nzUnsignInt>
+<clength>    -> * <nzUnsignInt>
 <cdim>       -> ( <id> )
 <cvname>     -> , <id> {<clength>} {<cdim>}
 
@@ -270,6 +270,7 @@ Whitespace   => [[:blank:]]*
 
 <Write>      -> WRITE ( {<Unit>} <id> {<Fmt>} {<Err>} {<Iostat>} {<Recl>} ) {<nlist>}
 
+<constant>   -> <chrConst>
 <constant>   -> <kexpr>
 
 #<expr>       -> <iexpr> 
