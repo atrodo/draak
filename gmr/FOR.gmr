@@ -125,6 +125,7 @@ Whitespace   => [[:blank:]]*
 <Close>      -> CLOSE ( {<Unit>} <id> {<Err>} {<Iostat>} {<Status>} )
 
 <Common>     -> COMMON {<Commonblock>} <nlist> <MoreCommon>*
+<Commonblock>-> //
 <Commonblock>-> /<id>/
 <nlist>      -> <vname> <nlists>*
 <nlists>     -> , <vname>
@@ -268,7 +269,7 @@ Whitespace   => [[:blank:]]*
 <message>    ~> m/(\d{1,5})/
 <message>    -> <chrConst>
 
-<Subroutine> -> SUBROUTINE <id> <actuals>
+<Subroutine> -> SUBROUTINE <id> {<actuals>}
 
 <Write>      -> WRITE ( {<Unit>} <id> {<Fmt>} {<Err>} {<Iostat>} {<Recl>} ) {<nlist>}
 
