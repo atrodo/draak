@@ -173,8 +173,8 @@ Whitespace   => [[:blank:]]*
 <fs>         -> ( <flist> <flists>* )
 <fs>         -> <LabelRef>
 <flists>     -> , <flist>
-<flist>      -> {<repeatable>} <ed>
-<flist>      -> {<repeatable>} <fs>
+<flist>      -> {<nzUnsignInt>} <ed>
+<flist>      -> {<nzUnsignInt>} <fs>
 <flist>      -> <ned>
 
 <ed>         -> I<nzUnsignInt>
