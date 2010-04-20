@@ -159,6 +159,7 @@ begin
 
   for i := 1 to length(Fcapture)-1 do
     replacement := StringReplace(replacement, '$'+intToStr(i), Fcapture[i].captured, [rfReplaceAll]);
+  replacement := StringReplace(replacement, '\n', #10, [rfReplaceAll]);
   Fmatched := replacement;
   result := FboundString;
   delete(result, Fcapture[0].pos, Fcapture[0].len);
