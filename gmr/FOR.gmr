@@ -248,7 +248,7 @@ Whitespace   => [[:blank:]]*
 <Print>      -> <fs> {<nlist>}
 
 <Read>       -> READ <fs> , {<nlist>}
-<Read>       -> READ {<UNIT>} <id> {<Fmt>} {<EndFile>} {<Err>} {<Iostat>} {<Recl>} {<nlist>}
+<Read>       -> READ ( {<Unit>} <id> {<Fmt>} {<EndFile>} {<Err>} {<Iostat>} {<Recl>} ) {<nlist>}
 
 <Real>       -> REAL <vname> <vnames>*
 
