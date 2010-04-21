@@ -113,11 +113,11 @@ Whitespace   => [[:blank:]]*
 <Param>      -> <expr>
 <Params>     -> , <Param>
 
-<Character>  -> CHARACTER {<cchars>} <id> {<clength>} {<cdim>} {<cvname>}
+<Character>  -> CHARACTER {<cchars>} <cvname> <cvnames>*
 <cchars>     -> * <nzUnsignInt>
 <clength>    -> * <nzUnsignInt>
-<cdim>       -> ( <id> )
-<cvname>     -> , <id> {<clength>} {<cdim>}
+<cvnames>    -> , <cvname>
+<cvname>     -> <vname> {<clength>}
 
 <Close>      -> CLOSE ( {<Unit>} <id> {<Err>} {<Iostat>} {<Status>} )
 
