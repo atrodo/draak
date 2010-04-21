@@ -173,6 +173,8 @@ Whitespace   => [[:blank:]]*
 <fs>         -> ( <flist> <flists>* )
 <fs>         -> <LabelRef>
 <flists>     -> , <flist>
+<flists>     -> {<comma>} <nedOpt>
+<flists>     -> {<comma>} <nedOpt> <flist>
 <flist>      -> {<nzUnsignInt>} <ed>
 <flist>      -> {<nzUnsignInt>} <fs>
 <flist>      -> <ned>
@@ -202,6 +204,9 @@ Whitespace   => [[:blank:]]*
 <ned>        -> {<integer>}P
 <ned>        -> BN
 <ned>        -> BZ
+
+<nedOpt>     -> /
+<nedOpt>     -> :
 
 <Function>   -> {<type>} FUNCTION <id> <actuals>
 
