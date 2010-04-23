@@ -70,7 +70,7 @@ type
 
 implementation
 
-uses sysutils, draak;
+uses sysutils, draak, libc;
 
 const buffStep = 2000;
 
@@ -92,6 +92,13 @@ var a: string; i, o, buffLen: cardinal;
   preprocess: hashs.strArr;
   preprocess_re: TRegExp;
   s_re: TRegExp;
+
+  preprocessor: hashs.strArr;
+  preprocessor_io: array[0..2] of PIOFile;
+  preprocessor_in: array[0..2] of Integer;
+  preprocessor_out: array[0..2] of Integer;
+  returncode, childpid: integer;
+  inbuff: String;
 begin
   f := inF; start := startChar;
   if inB = '' then
@@ -115,18 +122,82 @@ begin
 
     if assigned(settings) then
     begin
+
+      preprocessor := settings.lookup('Preprocessor');
+      if length(preprocessor) > 0 then
+        for i := 0 to length(preprocessor)-1 do
+        begin
+
+          returncode := pipe(@preprocessor_in);
+          if returncode <> 0 then
+            Raise Exception.create('Could not create a pipe');
+          returncode := pipe(@preprocessor_out);
+          if returncode <> 0 then
+            Raise Exception.create('Could not create a pipe');
+
+          childpid := fork;
+          if childpid < 0 then
+            Raise Exception.create('Could not fork a child: '+strerror(childpid));
+          if childpid = 0 then
+          begin
+            __close(0);
+            dup2(preprocessor_in [0], 0); // Make stdin the pipe input
+            __close(1);
+            dup2(preprocessor_out[1], 1); // Make stdout the pipe output
+            // We don't need these, they're already dupped
+            __close(preprocessor_in [0]);
+            __close(preprocessor_in [1]);
+            __close(preprocessor_out[0]);
+            __close(preprocessor_out[1]);
+
+            execlp(PChar(preprocessor[i]), nil);
+            raise Exception.create('Bad execlp!');
+          end;
+          __close(preprocessor_in[0]);
+          __close(preprocessor_out[1]);
+          preprocessor_io[0] := fdopen(preprocessor_out[0], 'r');
+          preprocessor_io[1] := fdopen(preprocessor_in [1], 'w');
+          o := 0;
+          while length(buff) > 0 do
+          begin
+            o := fwrite(PChar(buff), 1, length(buff), preprocessor_io[1]);
+            buff := system.copy(buff, o+1, length(buff));
+          end;
+          fflush(preprocessor_io[1]);
+          fclose(preprocessor_io[1]);
+          setlength(inbuff, 1024);
+          while feof(preprocessor_io[0]) = 0 do
+          begin
+            setlength(inbuff, 1024);
+            o := fread(PChar(inbuff), 1, length(inbuff), preprocessor_io[0]);
+            buff := buff + system.copy(inbuff, 0, o);
+          end;
+          fclose(preprocessor_io[0]);
+          waitpid(childpid, nil, 0);
+
+          {
+          preprocessor_io := popen(PChar(preprocessor[i]), 'w');
+          if assigned(preprocessor_io) then
+          begin
+            fwrite(PChar(buff), sizeof(char), length(buff), preprocessor_io);
+            pclose(preprocessor_io);
+          end;
+          }
+        end;
+
       preprocess := settings.lookup('Preprocess');
       preprocess_re := TRegExp.create;
       preprocess_re.bind(buff);
       s_re := TRegExp.create('s/(.*)/(.*)/[\s\w]*$');
-      for i := 0 to length(preprocess)-1 do
-      begin
-        if s_re.match(preprocess[i]) then
+      if length(preprocess) > 0 then
+        for i := 0 to length(preprocess)-1 do
         begin
-          preprocess_re.compile(s_re.capture[1].captured, [IgnoreCase, MultiLine, SingleLine, Extended, Global]);
-          buff := preprocess_re.substitute(buff, s_re.capture[2].captured);
+          if s_re.match(preprocess[i]) then
+          begin
+            preprocess_re.compile(s_re.capture[1].captured, [IgnoreCase, MultiLine, SingleLine, Extended, Global]);
+            buff := preprocess_re.substitute(buff, s_re.capture[2].captured);
+          end;
         end;
-      end;
       //raise Exception.create('bah');
       //writeln(buff);
     end;

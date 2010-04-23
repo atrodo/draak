@@ -1,18 +1,12 @@
 Root         => <Goal>
 
+Preprocessor => ./gmr/fortranpp.pl
+
 # Remove comments
-Preprocess   => s/^[c*].*?\n//i
+#Preprocess   => s/^[c*].*?\n//i
 
 # Any line without line numbers need protection
 Preprocess   => s/^(.{0,72})\n/$1 /i
-
-# Continuation lines
-# We can have up to 8, so we'll do it 3 times.  Why 3?  Simple.  On a 8 line,
-# the first time we'll combine lines 1&2, 3&4, 5&6, 7&8.  Second time, we'll
-# combine 1-2&3-4, 5-6&7-8.  The third time we'll combine 1-4&5-8, giving us 1-8
-Preprocess   => s/^(.{6}) ([^\n]*?) (\d{8})? \n .{5} [^0\s] ([^\n]*?) (\d{8})? \n/$1$2$4$3\n/
-Preprocess   => s/^(.{6}) ([^\n]*?) (\d{8})? \n .{5} [^0\s] ([^\n]*?) (\d{8})? \n/$1$2$4$3\n/
-Preprocess   => s/^(.{6}) ([^\n]*?) (\d{8})? \n .{5} [^0\s] ([^\n]*?) (\d{8})? \n/$1$2$4$3\n/
 
 # Remove line numbers
 Preprocess   => s/(\d{8})$//
@@ -35,6 +29,7 @@ Whitespace   => [[:blank:]]*
 
 <Statements> -> <Label> {<Statement>} <EOL>
 
+<Statement>  -> <Assignment>
 <Statement>  -> <Assign>
 <Statement>  -> <Backspace>
 <Statement>  -> <Call>
@@ -70,7 +65,6 @@ Whitespace   => [[:blank:]]*
 <Statement>  -> <Save>
 <Statement>  -> <Stop>
 <Statement>  -> <Write>
-<Statement>  -> <Assignment>
 
 <Program>    -> PROGRAM <id>
 #<Program>    ~> m/\G(\w)/
