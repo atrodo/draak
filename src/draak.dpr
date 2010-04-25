@@ -152,7 +152,7 @@ begin
   except on Ex: Exception do
   //except
     begin
-    outFile.Destroy;
+    if assigned(outfile) then outFile.Destroy;
     e.Free; draak1.clear;
     draak1.Free;
     writeln(Ex.message);
