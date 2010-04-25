@@ -172,6 +172,7 @@ Whitespace   => [[:blank:]]*
 <flist>      -> {<nzUnsignInt>} <ed>
 <flist>      -> {<nzUnsignInt>} <fs>
 <flist>      -> <ned>
+<flist>      -> <nedOpt> <flist>
 
 <ed>         -> I<nzUnsignInt>
 <ed>         -> I<nzUnsignInt>.<unsignInt>
