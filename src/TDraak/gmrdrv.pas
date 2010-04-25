@@ -17,8 +17,9 @@ type
   strArr = array of string;
 
   PGmrAtom = ^RGmrAtom;
+  AGmrAtom = array of PGmrAtom;
   RGmrAtom = record
-    optional, star: boolean;
+    optional, star, appended: boolean;
     typed: AtomType;
     data: String;
     re: TRegExp;
@@ -30,7 +31,7 @@ type
     id: cardinal;
     name: string;
     next: PGmrNode;
-    rhs : array of PGmrAtom;
+    rhs : AGmrAtom;
     macros: array of string;
   end;
 
@@ -130,7 +131,7 @@ begin
 
     hasNonTerm := false;
 
-    for i := 3 to 5 do
+    for i := 3 to 6 do
       if gmr_re.capture[i].captured <> '' then
         hasNonTerm := true;
 
@@ -160,6 +161,8 @@ begin
       dumbAtom.re := nil;
       dumbAtom.optional := false;
       dumbAtom.star     := false;
+      dumbAtom.appended     := false;
+      dumbAtom.data     := '';
 
       // If we have optional space, let's record it as such
       if gmr_re.capture[2].captured <> '' then
@@ -183,10 +186,21 @@ begin
         //writeln('star');
       end
       else
-      // One
+      // Appended node
       if gmr_re.capture[5].captured <> '' then
       begin
+        dumbAtom.appended := true;
+        if (length(dumbNode.rhs) = 0)
+            or (dumbNode.rhs[length(dumbNode.rhs)-1].typed <> nonterminal) then
+          Raise Exception.create('Appended nodes must immediately follow nonterminal nodes' + #10 + '  At '+rhs);
         dumbAtom.data := gmr_re.capture[5].captured;
+        //writeln('append');
+      end
+      else
+      // One
+      if gmr_re.capture[6].captured <> '' then
+      begin
+        dumbAtom.data := gmr_re.capture[6].captured;
         //writeln('one');
       end;
       setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
@@ -371,6 +385,6 @@ end;
 {* parsing it into memory, and giving the apporiate rule to those that ask.   *}
 
 begin
-  gmr_re := TRegExp.create('(.*?)(\s*)(?:{(<\w+>)} | (<\w+>)\* | (<\w+>) | $)', [Extended]);
+  gmr_re := TRegExp.create('(.*?)(\s*)(?:{(<\w+>)} | (<\w+>)[*] | [+](<\w+>) | (<\w+>) | $)', [Extended]);
   terminalSpaces := TRegExp.create('\s+', [Global]);
 end.

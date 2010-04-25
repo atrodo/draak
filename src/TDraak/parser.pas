@@ -50,6 +50,7 @@ type
     charno: cardinal;
     nodes: array of record
       inNode: PGmrNode;
+      mustFollow: string;
       status: memostatus;
     end;
   end;
@@ -59,11 +60,11 @@ type
     err: TError;
     lines: cardinal;
     memopad: RMemopad;
-    function checkpad(charno: cardinal; inNode: PGmrNode): memostatus;
-    procedure addmemo(charno: cardinal; inNode: PGmrNode; status: memostatus);
+    function checkpad(charno: cardinal; inNode: PGmrNode; mustFollow: AGmrAtom): memostatus;
+    procedure addmemo(charno: cardinal; inNode: PGmrNode; mustFollow: AGmrAtom; status: memostatus);
     //alphanum, numbers, hexs, bins, octs: set of char;
     procedure parse(inF: TFile; inG: TGmr);
-    function parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode): word;
+    function parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode; mustFollow: AGmrAtom): word;
   end;
 
   procedure rootDestroy(inP: PParseNode);
@@ -296,11 +297,17 @@ begin
   setLength(lineNums, 0);
 end;
 
-function TParser.checkpad(charno: cardinal; inNode: PGmrNode): memostatus;
+function TParser.checkpad(charno: cardinal; inNode: PGmrNode; mustFollow: AGmrAtom): memostatus;
 var
   i, o: cardinal;
+  mustFollowStr: string;
 begin;
   result := unknown;
+
+  mustFollowStr := '';
+  if length(mustFollow) > 0 then
+    for i := 0 to length(mustFollow)-1 do
+      mustFollowStr := mustFollowStr + mustFollow[i].data;
 
   if length(memopad) > 0 then
     for i := 0 to length(memopad)-1 do
@@ -312,7 +319,7 @@ begin;
           if length(nodes) > 0 then
             for o := 0 to length(nodes)-1 do
             begin
-              if nodes[o].inNode = inNode then
+              if (nodes[o].inNode = inNode) and (nodes[o].mustFollow = mustFollowStr) then
               begin
                 result := nodes[o].status;
                 exit;
@@ -323,10 +330,16 @@ begin;
     end
 end;
 
-procedure TParser.addmemo(charno: cardinal; inNode: PGmrNode; status: memostatus);
+procedure TParser.addmemo(charno: cardinal; inNode: PGmrNode; mustFollow: AGmrAtom; status: memostatus);
 var
   i, o: cardinal;
+  mustFollowStr: string;
 begin;
+  mustFollowStr := '';
+  if length(mustFollow) > 0 then
+    for i := 0 to length(mustFollow)-1 do
+      mustFollowStr := mustFollowStr + mustFollow[i].data;
+
   if length(memopad) > 0 then
     for i := 0 to length(memopad)-1 do
     begin
@@ -337,7 +350,7 @@ begin;
           if length(nodes) > 0 then
             for o := 0 to length(nodes)-1 do
             begin
-              if nodes[o].inNode = inNode then
+              if (nodes[o].inNode = inNode) and (nodes[o].mustFollow = mustFollowStr)then
               begin
                 nodes[o].status := status;
                 exit;
@@ -349,6 +362,7 @@ begin;
           setlength(nodes, o+1);
           nodes[o].inNode := inNode;
           nodes[o].status := status;
+          nodes[o].mustFollow := mustFollowStr;
           exit;
         end;
       end;
@@ -364,6 +378,7 @@ begin;
     setlength(nodes, o+1);
     nodes[o].inNode := inNode;
     nodes[o].status := status;
+    nodes[o].mustFollow := mustFollowStr;
     exit;
   end;
 
@@ -376,7 +391,7 @@ var s: TString;
 begin
   lines := 0;
   s := TString.create(inF, 0, '', nil, inG.settings);
-  i := parseDecent(s, inG, inG.getGoal, Node);
+  i := parseDecent(s, inG, inG.getGoal, Node, nil);
   lines := inF.lineCount;
   if i < s.len-1 then i := 0;
   if i = 0 then err.err('Did not Parse. Error around "'+s.copy(s.max-20, 40)+'" Line '+intToStr(s.lineFind(s.max)));
@@ -385,24 +400,29 @@ begin
   writeln(length(memopad));
 end;
 
-function TParser.parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode): word;
+function TParser.parseDecent(inS: TString; inG: TGmr; inNode: PGmrNode; out child: PParseNode; mustFollow: AGmrAtom): word;
 var dumbAtom, tempAtom: PGmrAtom;
   tempNode: AGmrNode;
-  s: string; i, o, count: cardinal;
+  s: string; i: cardinal;
+  parsedLen: cardinal;
+  returnedLen: cardinal;
   atomI: word;
+  atomO: word;
   nodeI: word;
   Node: PParseNode;
   partial: boolean;
   matched: boolean;
   done:    boolean;
   tempS: TString;
+  appends: AGmrAtom;
+  allAtoms: AGmrAtom;
 begin
   //write(inNode.id); write(' : '); write(inS.char); writeln(' : '+inNode.name);
   result := 0;
 
   {$DEFINE MEMOPAD}
   {$ifdef MEMOPAD}
-  case checkPad(inS.char, inNode) of
+  case checkPad(inS.char, inNode, mustFollow) of
     unknown: ;
     success: ;
     failure: exit;
@@ -412,7 +432,7 @@ begin
       end;
   end;
 
-  addmemo(inS.char, inNode, inprogress);
+  addmemo(inS.char, inNode, mustFollow, inprogress);
   {$endif}
 
   err.newNode(inNode.name); // + '"' + inS.copy(0, 10) + '"');
@@ -423,29 +443,37 @@ begin
   setlength(child.children, 0);
   child.point := inNode;
   //dumbAtom := innode.RHS;
-  o := 1;
+  parsedLen := 1;
   dumbAtom := innode.RHS[0];
   if (dumbAtom.typed = nonTerminal) AND (dumbAtom.data = inNode.name) then
     raise EDraakNoCompile.Create('Infinate recursion on '+inNode.name);
 
   try
-    for atomI := 0 to length(innode.RHS)-1 do
+    allAtoms := innode.RHS;
+    atomO := length(allAtoms);
+    if length(mustFollow) > 0 then
+    begin
+      setlength(allAtoms, length(allAtoms)+length(mustFollow));
+      for i := 0 to length(mustFollow) - 1 do
+        allAtoms[i+atomO] := mustFollow[i];
+    end;
+
+    for atomI := 0 to length(allAtoms)-1 do
     begin
       if inS[1] = #0 then exit;
-      //if inS[o] = ' ' then inc(o);
-      dumbAtom := innode.RHS[atomI];
+      dumbAtom := allAtoms[atomI];
 
       done    := false;
 
       while done = false do
       begin
         matched := false;
-        err.addNode('"' + inS.copy(o, 20) + '"');
+        err.addNode('"' + inS.copy(parsedLen, 20) + '"');
         err.addNode(dumbAtom.data);
         case dumbAtom.typed of
          terminal:
           begin
-            matched := inS.match(dumbAtom.re, o);
+            matched := inS.match(dumbAtom.re, parsedLen);
             if matched then
             begin
               err.addNode('-> '+dumbAtom.data);
@@ -454,7 +482,7 @@ begin
           end;
          Matching:
           begin
-            matched := inS.match(dumbAtom.re, o);
+            matched := inS.match(dumbAtom.re, parsedLen);
             if matched then
             begin
               err.addNode('~> '+dumbAtom.data);
@@ -469,12 +497,33 @@ begin
           end;
          nonterminal:
           begin
-            count := 0;
-
             // This is an optional match, normally just for taking care
             // of spaces in stars
             if dumbAtom.re <> nil then
-              inS.match(dumbAtom.re, o);
+              inS.match(dumbAtom.re, parsedLen);
+
+            setLength(appends, 0);
+            if (atomI < length(innode.RHS)-1) and (innode.RHS[atomI+1].appended = true) then
+            begin
+              for atomO := atomI+1 to length(innode.RHS)-1 do
+              begin
+                if innode.RHS[atomO].appended = false then break;
+                setLength(appends, length(appends)+1);
+                appends[length(appends)-1] := innode.RHS[atomO];
+              end;
+            end;
+
+            // If we are at the end of the node (including if all of the
+            // nodes after us are append nodes), append the mustFollow array
+            // onto the appends array.
+            // This will ONLY happen on non-star nodes
+            atomO := length(appends);
+            if (dumbAtom.star = false) and (atomI + atomO = length(innode.RHS)-1) and (length(mustFollow) > 0) then
+            begin
+              setlength(appends, atomO+length(mustFollow));
+              for i := 0 to length(mustFollow)-1 do
+                appends[i+atomO] := mustFollow[i];
+            end;
 
             tempNode := inG.getHashNode(dumbAtom.data);
             if length(tempNode) = 0 then
@@ -486,13 +535,13 @@ begin
             nodeI := 0;
             while nodeI < length(tempNode) do
             begin
-              tempS := inS.getNew(o);
-              i := parseDecent(tempS, inG, tempNode[nodeI], Node);
+              tempS := inS.getNew(parsedLen);
+              i := parseDecent(tempS, inG, tempNode[nodeI], Node, appends);
               tempS.Free;
               if i > 0 then
               begin {That option was a winner}
                 matched := true;
-                o := o + i;
+                parsedLen := parsedLen + i;
                 break;
 
                 {
@@ -519,7 +568,7 @@ begin
           setLength(children, length(children)+1);
           children[length(children)-1] := Node;
           Node := nil;
-          child.line := inS.lineFind(inS.char+o);
+          child.line := inS.lineFind(inS.char+parsedLen);
         end;
 
         //writeln(dumbAtom.star);
@@ -536,13 +585,18 @@ begin
 
         if matched = false then exit;
       end;
+
+      if atomI < length(innode.RHS) then
+        returnedLen := parsedLen;
+
     end;
-    result := o-1;
+    //if atomI < length(innode.RHS) then
+      result := returnedLen-1;
   finally begin
     if result = 0 then
     begin
       {$ifdef MEMOPAD}
-      addmemo(inS.char, inNode, failure);
+      addmemo(inS.char, inNode, mustFollow, failure);
       {$endif}
       //err.popNode('!!!');
       err.popNode('!!! '+inNode.name);
@@ -553,7 +607,7 @@ begin
     end else
     begin
       {$ifdef MEMOPAD}
-      addmemo(inS.char, inNode, success);
+      addmemo(inS.char, inNode, mustFollow, success);
       {$endif}
       err.popNode('');
     end;

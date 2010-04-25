@@ -27,7 +27,7 @@ Whitespace   => [[:blank:]]*
 #<Statement>  -> <Function>
 #<Statement>  -> <Subroutine>
 
-<Statements> -> <Label> {<Statement>} <EOL>
+<Statements> -> <Label> {<Statement>}+<EOL>
 
 <Statement>  -> <Assignment>
 <Statement>  -> <Assign>
@@ -316,7 +316,7 @@ Whitespace   => [[:blank:]]*
 <lprimary>   -> <id>
 <lprimary>   -> <arrayelem>
 <lprimary>   -> <id> <actuals>
-<lprimary>   -> <expr> <relop> <expr>
+<lprimary>   -> <expr>+<relop>+<expr>
 <lprimary>   -> ( <lexpr> )
 
 <relop>      -> .LT.
