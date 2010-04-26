@@ -166,6 +166,7 @@ Whitespace   => [[:blank:]]*
 <External>   -> EXTERNAL <nlist> <nlists>*
 
 <Format>     -> FORMAT <fs>
+<fs>         -> ( )
 <fs>         -> ( <flist> <flists>* )
 <fs>         -> <LabelRef>
 <flists>     -> , <flist>
@@ -175,6 +176,7 @@ Whitespace   => [[:blank:]]*
 <flist>      -> {<nzUnsignInt>} <fs>
 <flist>      -> <ned>
 <flist>      -> <nedOpt> <flist>
+<flist>      -> {<integer>}P <flist>
 
 <ed>         -> I<nzUnsignInt>
 <ed>         -> I<nzUnsignInt>.<unsignInt>
