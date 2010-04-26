@@ -90,6 +90,8 @@ Whitespace   => [[:blank:]]*
 <Fmt>        -> , {<fmteq>} <fs>
 <fmteq>      -> FMT =
 
+<Assignment> -> <arrayelem> = <constant>
+<Assignment> -> <id> = <constant>
 <Assignment> -> <arrayelem> = <lexpr>
 <Assignment> -> <id> = <lexpr>
 <Assignment> -> <arrayelem> = <expr>
