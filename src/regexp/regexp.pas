@@ -59,6 +59,8 @@ type
     property s[regex: string; replace: string]: string read boundsubstitute;
   end;
 
+  function generateFlags(flags: string): RegExpFlags;
+
 implementation
 
 uses SysUtils;
@@ -315,6 +317,27 @@ begin
   setLength(Fcapture, 0);
   if assigned(Fpcre) then
     pcre_free(Fpcre);
+end;
+
+function generateFlags(flags: string): RegExpFlags;
+var
+  i: cardinal;
+begin
+  result := [];
+
+  if length(flags) > 0 then
+    for i := 0 to length(flags)-1 do
+    begin
+      case flags[i] of
+        // IgnoreCase, MultiLine, SingleLine, Extended, Global
+        'i': Include(result, IgnoreCase);
+        'm': Include(result, MultiLine);
+        's': Include(result, SingleLine);
+        'x': Include(result, Extended);
+        'g': Include(result, Global);
+      end;
+    end;
+
 end;
 
 end.
