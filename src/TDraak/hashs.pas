@@ -1346,7 +1346,9 @@ function TStringHash.last(s: string): string;
 var d: strArr;
 begin
   d := lookup(s);
-  result := d[length(d)-1];
+  result := '';
+  if length(d) > 0 then
+    result := d[length(d)-1];
 end;
 
 function TStringHash.len(s: string): string;
