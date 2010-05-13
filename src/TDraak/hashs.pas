@@ -1297,7 +1297,15 @@ begin
   while (dumbNode <> nil) AND (dumbNode.name <> s) do
     dumbNode := dumbNode.next;
   if dumbNode = nil then
-    begin add(s, data); exit; end;
+  begin 
+    //add(s, data);
+    new(dumbNode);
+    dumbNode.next := table[i];
+    table[i] := dumbNode;
+    dumbNode.name := s;
+    //dumbNode.data := data;
+    //exit;
+  end;
   setLength(dumbNode.data, length(dumbNode.data)+1);
   dumbNode.data[length(dumbNode.data)-1] := data;
 end;

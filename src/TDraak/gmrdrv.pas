@@ -42,11 +42,15 @@ type
       table: array[0..HashSize] of PGmrNode;
       Fcurrent: PGmrNode;
       settings: TStringHash;
+    private
+      //Convenient settings storage
+      whitespace: string;
+      reFlags: RegExpFlags;
     public
       constructor create(in_settings: TStringHash);
       destructor destroy; override;
       procedure add(const lhs, rhs: string); overload;
-      procedure add(const lhs, rhs: string; re: TRegExp); overload;
+      procedure addregex(const lhs, rhs: string; flag: string); overload;
       //procedure addRHS(const inS: string);
       procedure addMacro(const macro: string);
       procedure clearCurrent;
@@ -101,7 +105,6 @@ var dumbNode: PGmrNode;
   done: boolean;
   term: string;
   nonterm: string;
-  whitespace: string;
   dumbAtom: PGmrAtom;
   hasNonTerm: boolean;
   i: cardinal;
@@ -119,9 +122,15 @@ begin
   done := false;
   gmr_re.bind(rhs);
 
-  whiteSpace := settings.last('Whitespace');
+  if whitespace = '' then
+    whiteSpace := settings.last('Whitespace');
   if whiteSpace = '' then
     whiteSpace := '\s*';
+
+  if reFlags = [] then
+    reFlags := generateFlags(settings.last('REFlags'));
+  if reFlags = [] then
+    reFlags := generateFlags('xms');
 
   //writeln('***'+rhs);
   //writeln(0);
@@ -149,7 +158,7 @@ begin
       dumbAtom.data := term;
       term := '\G\Q'+terminalSpaces.substitute(term, '\E'+whiteSpace+'\Q')+'\E';
       //writeln('  '+term);
-      dumbAtom.re   := TRegExp.create(term, []);
+      dumbAtom.re   := TRegExp.create(term, reFlags);
       setLength(dumbNode.rhs, length(dumbNode.rhs)+1);
       dumbNode.rhs[length(dumbNode.rhs)-1] := dumbAtom;
     end;
@@ -167,7 +176,7 @@ begin
       // If we have optional space, let's record it as such
       if gmr_re.capture[2].captured <> '' then
       begin
-        dumbAtom.re := TRegExp.create(whiteSpace, []);
+        dumbAtom.re := TRegExp.create(whiteSpace, reFlags);
       end;
 
       // Optional
@@ -228,11 +237,12 @@ begin
   //add(lhs, rhs, TRegExp.create('^'+rhs, [MultiLine, SingleLine, Extended]));
 end;
 
-procedure TGmrHash.add(const lhs, rhs: string; re: TRegExp);
+procedure TGmrHash.addregex(const lhs, rhs: string; flag: string);
 var
   dumbNode: PGmrNode;
   dumbAtom: PGmrAtom;
   hashCode: word;
+  useFlags: RegExpFlags;
 begin
   new(dumbNode);
   dumbNode.id := current_id;
@@ -243,12 +253,22 @@ begin
   setLength(dumbNode.macros, 0);
   table[hashCode] := dumbNode;
 
+  if reFlags = [] then
+    reFlags := generateFlags(settings.last('REFlags'));
+  if reFlags = [] then
+    reFlags := generateFlags('xms');
+
   Fcurrent := dumbNode;
+
+  if flag <> '' then
+    useFlags := generateFlags(flag)
+  else
+    useFlags := reFlags;
 
   new(dumbAtom);
   dumbAtom.typed := Matching;
   dumbAtom.data  := rhs;
-  dumbAtom.re    := re;
+  dumbAtom.re    := TRegExp.create('\G'+rhs, useFlags);
   dumbAtom.optional := false;
   dumbAtom.star     := false;
   dumbNode.rhs[0] := dumbAtom;
@@ -308,7 +328,7 @@ begin
   cleanup := TRegExp.create('\s+', [MultiLine, SingleLine, Extended]);
   settingMatch := TRegExp.create('^\s*(\w+)\s*=>\s*(.*)$', [Extended]);
   gmrMatchN := TRegExp.create('^\s*(<\w+>)\s*->\s*(.*)$', [Extended]);
-  gmrMatchM := TRegExp.create('^\s*(<\w+>)\s*~>\s*m/(.*)/\s*$', [Extended]);
+  gmrMatchM := TRegExp.create('^\s*(<\w+>)\s*~>\s*m/(.*)/(\w*)\s*$', [Extended]);
   try
     while inF.eof <> true do
     begin
@@ -340,7 +360,8 @@ begin
       else
       if gmrMatchM.match(s) = true then
       begin
-        ghash.add(gmrMatchM.capture[1].captured, gmrMatchM.capture[2].captured, TRegExp.create('\G'+gmrMatchM.capture[2].captured, [SingleLine, MultiLine, Extended]));
+        //ghash.add(gmrMatchM.capture[1].captured, gmrMatchM.capture[2].captured, TRegExp.create('\G'+gmrMatchM.capture[2].captured, [SingleLine, MultiLine, Extended]));
+        ghash.addregex(gmrMatchM.capture[1].captured, gmrMatchM.capture[2].captured, gmrMatchM.capture[3].captured);
       end;
       {
       writeln('---'+gmrMatchN.matched);
