@@ -326,7 +326,7 @@ begin
   result := [];
 
   if length(flags) > 0 then
-    for i := 0 to length(flags)-1 do
+    for i := 1 to length(flags) do
     begin
       case flags[i] of
         // IgnoreCase, MultiLine, SingleLine, Extended, Global
