@@ -1,0 +1,53 @@
+Root         => <Goal>
+REFlags      => xmsi
+Preprocess   => s/\s+/ /
+
+<Goal>       -> <block> .
+
+<block>      -> <const>* <var>* <procedure>* <statement>*
+<const>      -> const <clist> ;
+<var>        -> var <vlist> ;
+<procedure>  -> procedure <id> ; <block> ;
+
+<statements> -> ; <statement>
+<statement>  -> <vname> := <expr>
+<statement>  -> call <id>
+<statement>  -> begin <statement> <statements>* end
+<statement>  -> if <condition> then <statement>
+<statement>  -> while <condition> do <statement>
+<statement>  -> ! <vname>
+<statement>  -> ? <vname>
+
+<condition>  -> odd <expr>
+<condition>  -> <expr> <relop> <expr>
+
+<relop>      -> =
+<relop>      -> #
+<relop>      -> <
+<relop>      -> <=
+<relop>      -> >
+<relop>      -> >=
+
+<expr>       -> {<addop>} <term> <addterm>*
+<addterm>    -> <addop> <term>
+<addop>      -> +
+<addop>      -> -
+
+<term>       -> <factor>
+<term>       -> <factor> / <factor>
+<term>       -> <factor> * <factor>
+
+<factor>     -> <id> 
+<factor>     -> <number>
+<factor>     -> ( <expr> )
+
+<vlist>      -> <vname> <vnames>*
+<vname>      -> <id>
+<vnames>     -> , <vname>
+
+<clist>      -> <cname> <cnames>*
+<cname>      -> <id> = <number>
+<cnames>     -> , <cname>
+
+<number>     ~> m/(\d+)/
+<id>         ~> m/([[:alpha:]]\w*)/
