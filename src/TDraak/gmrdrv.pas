@@ -14,7 +14,7 @@ uses filedrv, sysutils, StrUtils, hashs, RegExp;
 type
   AtomType = (Terminal, NonTerminal, Matching);
 
-  strArr = array of string;
+  //strArr = array of string;
 
   PGmrAtom = ^RGmrAtom;
   AGmrAtom = array of PGmrAtom;
@@ -32,7 +32,7 @@ type
     name: string;
     next: PGmrNode;
     rhs : AGmrAtom;
-    macros: array of string;
+    macros: strArr;
   end;
 
 
@@ -247,6 +247,7 @@ begin
   new(dumbNode);
   dumbNode.id := current_id;
   dumbNode.name := lhs;
+  setLength(dumbNode.macros, 0);
   hashCode := hash(lhs);
   dumbNode.next := table[hashCode];
   setLength(dumbNode.rhs, 1);
@@ -275,7 +276,13 @@ begin
 end;
 
 procedure TGmrHash.addMacro(const macro: string);
+var
+  len: cardinal;
 begin
+  if Fcurrent = nil then exit;
+  len := length(Fcurrent.macros);
+  setLength(Fcurrent.macros, len+1);
+  Fcurrent.macros[len] := macro;
 end;
 
 procedure TGmrHash.clearCurrent;
@@ -333,7 +340,6 @@ begin
     while inF.eof <> true do
     begin
       s := inF.getLine;
-      s := cleanup.substitute(s, ' ');
       if s = '' then continue;
       if s[1] = '#' then continue;
       {Macros}
@@ -348,6 +354,8 @@ begin
           ghash.addMacro(s);
         continue;
       end;
+
+      s := cleanup.substitute(s, ' ');
 
       {
       success := gmrMatch.match(s);
