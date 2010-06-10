@@ -13,7 +13,7 @@ uses hashs, error, gmrdrv, parser, classes;
 
 type
 
-  TMacroDrv = class(TPersistent)
+  TMacroDrv = class
     constructor create; virtual; abstract;
     procedure execute(inNode: PParseNode); virtual; abstract;
    protected
