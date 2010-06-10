@@ -1,0 +1,6 @@
+[submodule "parrot"]
+	path = parrot
+	url = git://github.com/leto/parrot.git
+[submodule "nqp-rx"]
+	path = nqp-rx
+	url = http://github.com/perl6/nqp-rx.git
