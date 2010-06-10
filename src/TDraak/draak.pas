@@ -78,6 +78,9 @@ implementation
 
 //uses cmddrv{$ifdef MSWindows}, windows {$endif} ;
 
+uses
+  parrotdrv;
+
 function timeCount(var t: int64): double;
 var i, f: int64;
 begin
@@ -175,14 +178,23 @@ begin
   if parse.rootNode <> nil then
   begin
     finalSuccess := true;
-    {
     if root = nil then
       root := parse.rootNode;
-    macro := FMacroClass.create;
+    FMacroClass := TMacroClass(GetClass('TDrv'+Grammar.settings.last('OutputDrv')));
+    writeln(not assigned(FMacroClass));
+    if not assigned(FMacroClass) then
+    begin
+      writeln('Could not load macro driver "'+Grammar.settings.last('OutputDrv')+'"');
+    end
+    else
+    begin
+      writeln(FMacroClass.ClassName);
+      macro := FMacroClass.create;
     macro.err := error;
     macro.gmr := Grammar;
     macro.searchDirs := FSearchPath;
     macro.execute(parse.rootNode);
+    {
     if macro.giantError = false then
     begin
       macro.outCode.SaveToStream(outStream);
@@ -192,6 +204,7 @@ begin
     end else begin finalSuccess := false; error.err('Error compiling file.'); end;
     macro.free;
     }
+    end;
   end; 
   parse.Free;
   tim := timeCount(t);
