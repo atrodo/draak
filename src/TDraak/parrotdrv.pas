@@ -9,7 +9,7 @@ unit parrotdrv;
 
 interface
 
-uses hashs, error, gmrdrv, parser, classes, Macro, embed, extend; 
+uses hashs, error, gmrdrv, parser, classes, Macro, parrot;
 
 type
 
