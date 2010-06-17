@@ -34,11 +34,49 @@ implementation
 
 uses Math, Sysutils;
 
+constructor TDrvParrot.create;
+begin
+  //FoutCode := TStringList.Create;
+  //FoutData := TStringList.Create;
+
+  setlength(cache, 0);
+  
+  Parrot_srand(0);
+  interp := Parrot_new(nil);
+  out_pbc := create_string('');
+
+end;
+
+procedure TDrvParrot.execute(inNode: PParseNode);
+var 
+  hllcode: Parrot_PMC;
+  pmc_result, pmc_tree: Parrot_PMC;
+  s: string;
+  oldExcpetionMask: TFPUExceptionMask;
+begin
+
+  oldExcpetionMask := SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
+
+  pmc_tree := genTree(inNode);
+  hllcode := Parrot_PMC_get_pmc_keyed_str(interp, pmc_tree, create_string('exec'));
+  
+  Parrot_ext_call(interp, hllcode, 'P->P', pmc_tree, @pmc_result);
+  PCT(pmc_result);
+  SetExceptionMask(oldExcpetionMask);
+
+end;
+
+procedure TDrvParrot.write(outStream: TFileStream);
+var
+  pbc: String;
+begin
+  pbc := Parrot_str_to_cstring(interp, out_pbc);
+  outStream.write(pbc, length(pbc))
+end;
+
 function TDrvparrot.create_string(s: string): Parrot_String;
 begin
-  //writeln('a');
   result := Parrot_new_string(interp, PChar(s), length(s), nil, 0);
-  //writeln('b');
 end;
 
 function TDrvparrot.new_pmc(s: string): Parrot_PMC;
@@ -50,23 +88,6 @@ begin
   Parrot_register_pmc(interp, result);
 end;
 
-constructor TDrvParrot.create;
-begin
-  //FoutCode := TStringList.Create;
-  //FoutData := TStringList.Create;
-
-  setlength(cache, 0);
-  
-  //writeln('e');
-  //Parrot_set_config_hash();
-  Parrot_srand(0);
-  interp := Parrot_new(nil);
-  out_pbc := create_string('');
-
-  //writeln('f');
-
-end;
-
 function TDrvParrot.genParrot(hllcode: string): Parrot_PMC;
 var
   compiler, errstr: Parrot_String;
@@ -76,8 +97,6 @@ var
 begin
 
   // This should utilize a cache.
-
-  //writeln('g');
 
   hll := Fgmr.settings.last('ParrotHLL');
   compiler := create_string('PIR');
@@ -103,8 +122,6 @@ begin
 
   Parrot_ext_call(interp, code, 'SS->P', create_string(hll), create_string(hllcode), @result);
 
-  //writeln('h');
-
 end;
 
 function TDrvParrot.genTree(inNode: PParseNode): Parrot_PMC;
@@ -115,62 +132,22 @@ var
 begin
   r := new_pmc('Hash');
 
-  //writeln('-');
   // exec
-  //writeln(assigned(r));
-  writeln('Before Parrot_PMC_set_pmc_keyed_str');
   Parrot_PMC_set_pmc_keyed_str(interp, r, create_string('exec'), genParrot(join(inNode.point.macros)) );
-  writeln('After Parrot_PMC_set_pmc_keyed_str');
 
   // data
   data := new_pmc('ResizablePMCArray');
-  writeln('5');
   if length(inNode.data) > 0 then
     for i := 0 to length(inNode.data)-1 do
     begin
       writeln(i);
       Parrot_PMC_push_string(interp, data, create_string(inNode.data[i]));
     end;
-  writeln('6');
   Parrot_PMC_set_pmc_keyed_str(interp, r, create_string('data'), data );
-  writeln('6');
 
   // children
 
   result := r;
-end;
-
-procedure TDrvParrot.execute(inNode: PParseNode);
-var 
-  hllcode: Parrot_PMC;
-  pmc_result, pmc_tree: Parrot_PMC;
-  s: string;
-  oldExcpetionMask: TFPUExceptionMask;
-begin
-
-  //writeln('1');
-  oldExcpetionMask := SetExceptionMask([exInvalidOp, exDenormalized, exZeroDivide, exOverflow, exUnderflow, exPrecision]);
-
-  //writeln('5');
-  //writeln(assigned(hllcode));
-  pmc_tree := genTree(inNode);
-  hllcode := Parrot_PMC_get_pmc_keyed_str(interp, pmc_tree, create_string('exec'));
-  
-  writeln('7');
-  Parrot_ext_call(interp, hllcode, 'P->P', pmc_tree, @pmc_result);
-  writeln('8');
-  PCT(pmc_result);
-  writeln('7');
-  SetExceptionMask(oldExcpetionMask);
-
-end;
-
-procedure TDrvParrot.write(outStream: TFileStream);
-var
-  pbc: String;
-begin
-  pbc := Parrot_str_to_cstring(interp, out_pbc);
-  //outStream.write(pbc, length(pbc))
 end;
 
 procedure TDrvParrot.PCT(inPast: Parrot_PMC);
@@ -198,22 +175,17 @@ begin
   sa[ 9] := '  $P2 = $P0."to_pir"($P1)';
   sa[10] := '  $P0 = compreg "PIR"';
   sa[11] := '  $P3 = $P0($P2)';
-  //sa[11] := '  $S0 = typeof $P0';
   sa[12] := '  say $S0';
   sa[13] := '  .return ($P3)';
   sa[14] := '.end';
 
-  writeln('1');
   code := Parrot_compile_string( interp, compiler, PChar(join(sa)), errstr);
-  writeln('1');
   if assigned(errstr) then
     raise Exception.create(Parrot_str_to_cstring(interp, errstr));
-  writeln('1');
 
   Parrot_ext_call(interp, code, 'P->S', inPast, @pbc);
   out_pbc := pbc;
-  writeln(Parrot_str_to_cstring(interp, pbc));
-  writeln('1');
+  //writeln(Parrot_str_to_cstring(interp, pbc));
 
 end;
 
