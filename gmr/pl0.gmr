@@ -1,8 +1,24 @@
 Root         => <Goal>
 REFlags      => xmsi
 Preprocess   => s/\s+/ /
+OutputDrv    => Parrot
+ParrotHLL    => nqp
 
 <Goal>       -> <block> .
+  sub (%p)
+  {
+    say("Hello World!");
+    my $d := %p{'exec'};
+    my $a := PAST::Block.new();
+    Q:PIR {
+      .local pmc p
+      .local string s
+      p = find_lex '$a'
+      s = typeof p
+      say s
+    };
+    return $a;
+  };
 
 <block>      -> <const>* <var>* <procedure>* <statement>*
 <const>      -> const <clist> ;

@@ -16,21 +16,22 @@ type
   TMacroDrv = class(TPersistent)
     constructor create; virtual; abstract;
     procedure execute(inNode: PParseNode); virtual; abstract;
+    procedure write(outStream: TFileStream); virtual; abstract;
    protected
     Ferr: TError;
     Fgmr: TGmr;
-    FoutCode: TStringList;
-    FoutData: TStringList;
+    //FoutCode: TStringList;
+    //FoutData: TStringList;
     FsearchDirs: string;
-    FgiantError: boolean;
+    //FgiantError: boolean;
     function join(data: strArr; joinStr: string = #10; lower: word = 0; upper: word = 65535): string;
    public
     property err: TError read Ferr write Ferr;
     property gmr: TGmr read Fgmr write Fgmr;
-    property outCode: TStringList read FoutCode write FoutCode;
-    property outData: TStringList read FoutData write FoutData;
+    //property outCode: TStringList read FoutCode write FoutCode;
+    //property outData: TStringList read FoutData write FoutData;
     property searchDirs: string read FsearchDirs write FSearchDirs;
-    property giantError: boolean read FgiantError write FgiantError;
+    //property giantError: boolean read FgiantError write FgiantError;
   end;
 
   TMacroClass = class of TMacroDrv;
