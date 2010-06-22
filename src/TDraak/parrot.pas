@@ -1176,6 +1176,10 @@ Function Parrot_str_to_cstring(interp: Parrot_Interp; s:Parrot_String): PChar;
 cdecl;
 external External_library name 'Parrot_str_to_cstring';
 
+Function Parrot_str_byte_length(interp: Parrot_Interp; s:Parrot_String): integer;
+cdecl;
+external External_library name 'Parrot_str_byte_length';
+
 Implementation
 
 begin
