@@ -91,10 +91,11 @@ begin
   Parrot_register_pmc(interp, result);
 end;
 
+var code: Parrot_PMC;
+
 function TDrvParrot.genParrot(hllcode: string): Parrot_PMC;
 var
   compiler, errstr: Parrot_String;
-  code: Parrot_PMC;
   sa: strArr;
   hll: string;
 begin
@@ -104,24 +105,27 @@ begin
   hll := Fgmr.settings.last('ParrotHLL');
   compiler := create_string('PIR');
 
-  setLength(sa, 14);
-  sa[ 0] := '.sub "" :anon';
-  sa[ 1] := '  .param string hll';
-  sa[ 2] := '  .param string code';
-  sa[ 3] := '  $P0 = compreg hll';
-  sa[ 4] := '  unless_null $P0, compile';
-  sa[ 5] := '  load_language "nqprx"';
-  sa[ 6] := '  $P0 = compreg "NQP-rx"';
-  sa[ 7] := ' compile:';
-  sa[ 8] := '  $P1 = $P0."compile"(code)';
-  sa[ 9] := '  $P1 = $P1()';
-  sa[10] := '  typeof $S2, $P1';
-  sa[11] := '  say $S2 #say $P1 #trace 1';
-  sa[12] := '  .return ($P1)';
-  sa[13] := '.end';
-  code := Parrot_compile_string( interp, compiler, PChar(join(sa)), errstr);
-  if assigned(errstr) then
-    raise Exception.create(Parrot_str_to_cstring(interp, errstr));
+  if not assigned(code) then
+  begin
+    setLength(sa, 14);
+    sa[ 0] := '.sub "" :anon';
+    sa[ 1] := '  .param string hll';
+    sa[ 2] := '  .param string code';
+    sa[ 3] := '  $P0 = compreg hll';
+    sa[ 4] := '  unless_null $P0, compile';
+    sa[ 5] := '  load_language "nqprx"';
+    sa[ 6] := '  $P0 = compreg "NQP-rx"';
+    sa[ 7] := ' compile:';
+    sa[ 8] := '  $P1 = $P0."compile"(code)';
+    sa[ 9] := '  $P1 = $P1()';
+    sa[10] := '  typeof $S2, $P1';
+    sa[11] := '  #say $S2 #say $P1 #trace 1';
+    sa[12] := '  .return ($P1)';
+    sa[13] := '.end';
+    code := Parrot_compile_string( interp, compiler, PChar(join(sa)), errstr);
+    if assigned(errstr) then
+      raise Exception.create(Parrot_str_to_cstring(interp, errstr));
+  end;
 
   Parrot_ext_call(interp, code, 'SS->P', create_string(hll), create_string(hllcode), @result);
 
