@@ -15,6 +15,7 @@ type
   PParseNode = ^RParseNode;
   RParseNode = record
     point: PGmrNode;
+    nonTermNum: cardinal;
     line: cardinal;
     data: array of string;
     children: array of PParseNode;
@@ -409,6 +410,7 @@ var dumbAtom, tempAtom: PGmrAtom;
   atomI: word;
   atomO: word;
   nodeI: word;
+  nonTermI: word;
   Node: PParseNode;
   partial: boolean;
   matched: boolean;
@@ -440,8 +442,10 @@ begin
   partial := false;
   child := new(PParseNode);
   Node := nil;
+  nonTermI := 0;
   setlength(child.children, 0);
   child.point := inNode;
+  child.nonTermNum := 0;
   //dumbAtom := innode.RHS;
   parsedLen := 1;
   dumbAtom := innode.RHS[0];
@@ -464,6 +468,9 @@ begin
       dumbAtom := allAtoms[atomI];
 
       done    := false;
+
+      if dumbAtom.typed = nonterminal then
+        inc(nonTermI);
 
       while done = false do
       begin
@@ -489,9 +496,13 @@ begin
               partial := true;
               Node := new(PParseNode);
               Node.point := inNode;
-              setLength(Node.data, dumbAtom.re.captureLength);
-              for i := 0 to length(Node.data)-1 do
-                Node.data[i] := dumbAtom.re.capture[i].captured;
+              Node.nonTermNum := 0;
+              if dumbAtom.re.captureLength > 1 then
+              begin
+                setLength(Node.data, dumbAtom.re.captureLength-1);
+                for i := 0 to length(Node.data)-1 do
+                  Node.data[i] := dumbAtom.re.capture[i+1].captured;
+              end;
               setLength(Node.children, 0);
             end;
           end;
@@ -542,6 +553,7 @@ begin
               begin {That option was a winner}
                 matched := true;
                 parsedLen := parsedLen + i;
+                Node.nonTermNum := nonTermI;
                 break;
 
                 {
