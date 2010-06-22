@@ -194,6 +194,7 @@ begin
     macro.gmr := Grammar;
     macro.searchDirs := FSearchPath;
     macro.execute(parse.rootNode);
+    macro.write(outStream);
     {
     if macro.giantError = false then
     begin

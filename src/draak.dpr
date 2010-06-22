@@ -128,7 +128,6 @@ begin
   draak1 := TDraak.create(nil);
   draak1.Flags := [timeStat];
   e := Errors.Create;
-  //outFile := TFileStream.Create(noext+'.asm', fmCreate);
   try
     {$ifdef WIN32}
     draak1.SearchPath := '.;'+cdir+';'+cdir+PathDelim+ext;
@@ -148,6 +147,7 @@ begin
     draak1.onNodePop := e.Draak1NodePop;
     {$endif}
 //    draak1.parse(Paramstr(1));
+    outFile := TFileStream.Create(noext+'.pbc', fmCreate);
     draak1.compile(outFile, Paramstr(1));
   except on Ex: Exception do
   //except

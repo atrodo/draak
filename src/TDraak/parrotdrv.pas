@@ -68,10 +68,13 @@ end;
 
 procedure TDrvParrot.write(outStream: TFileStream);
 var
-  pbc: String;
+  pbc: PChar;
+  len: cardinal;
 begin
   pbc := Parrot_str_to_cstring(interp, out_pbc);
-  outStream.write(pbc, length(pbc))
+  len := Parrot_str_byte_length(interp, out_pbc);
+  writeln(len);
+  outStream.write(pbc^, len)
 end;
 
 function TDrvparrot.create_string(s: string): Parrot_String;
@@ -126,11 +129,17 @@ end;
 
 function TDrvParrot.genTree(inNode: PParseNode): Parrot_PMC;
 var
-  data, children: Parrot_PMC;
+  data, children, nonTerms, named: Parrot_PMC;
   r: Parrot_PMC;
+  child: Parrot_PMC;
   i: cardinal;
 begin
   r := new_pmc('Hash');
+
+  // name
+  named := new_pmc('String');
+  Parrot_PMC_set_string_native(interp, named, create_string(inNode.point.name));
+  Parrot_PMC_set_pmc_keyed_str(interp, r, create_string('name'), named);
 
   // exec
   Parrot_PMC_set_pmc_keyed_str(interp, r, create_string('exec'), genParrot(join(inNode.point.macros)) );
@@ -140,12 +149,30 @@ begin
   if length(inNode.data) > 0 then
     for i := 0 to length(inNode.data)-1 do
     begin
-      writeln(i);
       Parrot_PMC_push_string(interp, data, create_string(inNode.data[i]));
     end;
   Parrot_PMC_set_pmc_keyed_str(interp, r, create_string('data'), data );
 
   // children
+  children := new_pmc('ResizablePMCArray');
+
+  if length(inNode.children) > 0 then
+    for i := 0 to length(inNode.children)-1 do
+    begin
+      if inNode.children[i] = nil then
+        continue;
+
+      child := genTree(inNode.children[i]);
+      nonTerms := Parrot_PMC_get_pmc_keyed_int(interp, children, inNode.children[i].nonTermNum);
+      if nonTerms = Parrot_PMC_null then
+      begin
+        Parrot_PMC_set_pmc_keyed_int(interp, children, inNode.children[i].nonTermNum, new_pmc('ResizablePMCArray'));
+        nonTerms := Parrot_PMC_get_pmc_keyed_int(interp, children, inNode.children[i].nonTermNum);
+      end;
+      Parrot_PMC_push_pmc(interp, nonTerms, child);
+    end;
+
+  Parrot_PMC_set_pmc_keyed_str(interp, r, create_string('xchildren'), children );
 
   result := r;
 end;
@@ -162,7 +189,7 @@ begin
   // Let's do this in PCT for now
 
   compiler := create_string('PIR');
-  setLength(sa, 15);
+  setLength(sa, 16);
   sa[ 0] := '.sub "" :anon';
   sa[ 1] := '  .param pmc inPast';
   sa[ 2] := '  $P0 = compreg "PAST"';
@@ -175,9 +202,10 @@ begin
   sa[ 9] := '  $P2 = $P0."to_pir"($P1)';
   sa[10] := '  $P0 = compreg "PIR"';
   sa[11] := '  $P3 = $P0($P2)';
-  sa[12] := '  say $S0';
-  sa[13] := '  .return ($P3)';
-  sa[14] := '.end';
+  sa[12] := '  $S0 = $P3';
+  sa[13] := '  say $S0';
+  sa[14] := '  .return ($S0)';
+  sa[15] := '.end';
 
   code := Parrot_compile_string( interp, compiler, PChar(join(sa)), errstr);
   if assigned(errstr) then
